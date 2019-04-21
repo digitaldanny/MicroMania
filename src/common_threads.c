@@ -42,6 +42,7 @@ semaphore_t LCDREADY;
 void common_buttons_init( void )
 {
     // Initialize the common globals for which buttons are pressed
+    myPlayerType = None;
     buttonUP_pressed = false;
     buttonRIGHT_pressed = false;
     buttonDOWN_pressed = false;
@@ -102,9 +103,23 @@ void common_ButtonPress ( void )
      NVIC_DisableIRQ(PORT5_IRQn);
      NVIC_DisableIRQ(PORT4_IRQn);
 
-     // clear flags
-     P4->IFG &= ~(BIT4 | BIT5);
-     P5->IFG &= ~(BIT4 | BIT5);
+     G8RTOS_AddThread(&common_debounceThread, 0, 0xFFFFFFFF, "DEBOUNCE");
+}
+
+// Debouncing thread waits for the button to stop bouncing
+// then re-enables interrupts for that port.
+void common_debounceThread ( void )
+{
+    sleep(200); // ms
+
+    // clear flags
+    P4->IFG &= ~(BIT4 | BIT5);
+    P5->IFG &= ~(BIT4 | BIT5);
+
+    NVIC_EnableIRQ(PORT5_IRQn);
+    NVIC_EnableIRQ(PORT4_IRQn);
+
+    G8RTOS_KillSelf();
 }
 
 /*********************************************** Background Threads *********************************************************************/

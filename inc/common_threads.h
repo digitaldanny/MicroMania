@@ -19,6 +19,9 @@
 #include "math.h"
 /*********************************************** Includes ********************************************************************/
 
+#define JOYSTICK_BIAS_X     500
+#define JOYSTICK_BIAS_Y     350
+
 /*********************************************** Semaphores ********************************************************************/
 extern semaphore_t CC3100_SEMAPHORE;
 extern semaphore_t LCDREADY;
@@ -37,6 +40,7 @@ void common_buttons_init( void );
 
 /*********************************************** Background Threads *********************************************************************/
 void common_IdleThread ( void );
+void common_debounceThread ( void );
 
 /*********************************************** Aperiodic Threads *********************************************************************/
 void common_ButtonPress ( void );
