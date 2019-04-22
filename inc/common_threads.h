@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include "G8RTOS.h"
 #include "cc3100_usage.h"
-#include "LCD_empty.h"
+#include "GLCD.h"
 #include "time.h"
 #include "math.h"
 /*********************************************** Includes ********************************************************************/

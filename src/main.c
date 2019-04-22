@@ -22,17 +22,13 @@
 
 #include "G8RTOS.h"
 #include "cc3100_usage.h"
-#include "LCD_empty.h"
+#include "GLCD.h"
 #include "common_threads.h"
 #include "game1.h"
 #include "game2.h"
 #include "game3.h"
 #include "game4.h"
 #include "menu.h"
-
-// MACROS --------------------------------------------
-#define TP_ENABLE   1
-#define TP_DISABLE  0
 
 // ================================== MAIN PROGRAM ===============================
 void main(void)
@@ -42,7 +38,7 @@ void main(void)
     // Initialize and launch RTOS
     G8RTOS_Init();
     common_buttons_init();
-    LCD_Init(TP_DISABLE);
+    LCD_Initializtion();
 
     G8RTOS_AddAperiodicEvent_Priority(&common_ButtonPress, 0, PORT4_IRQn);
     G8RTOS_AddAperiodicEvent_Priority(&common_ButtonPress, 0, PORT5_IRQn);
