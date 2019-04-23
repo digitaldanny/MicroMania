@@ -371,8 +371,12 @@ void LCD_Clear(uint16_t Color)
 {
 	uint32_t index;
 	
-		LCD_SetCursor(0,0); 
+	LCD_SetCursor(0,0);
 
+    LCD_WriteReg(HOR_ADDR_START_POS, 0x0000);     /* Horizontal GRAM Start Address */
+    LCD_WriteReg(HOR_ADDR_END_POS, (MAX_SCREEN_Y - 1));  /* Horizontal GRAM End Address */
+    LCD_WriteReg(VERT_ADDR_START_POS, 0x0000);    /* Vertical GRAM Start Address */
+    LCD_WriteReg(VERT_ADDR_END_POS, (MAX_SCREEN_X - 1)); /* Vertical GRAM Start Address */
 
 	LCD_WriteIndex(0x0022);
 	LCD_Send( Color );
@@ -602,16 +606,17 @@ void LCD_Text(uint16_t Xpos, uint16_t Ypos, uint8_t *str,uint16_t Color)// , uin
 void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, uint16_t Color)
 {
     // SET ALLOWABLE ADDRESS WINDOW
-    LCD_WriteReg(HOR_ADDR_START_POS,    yStart);    /* Horizontal GRAM Start Address */
-    LCD_WriteReg(HOR_ADDR_END_POS,      yEnd);      /* Horizontal GRAM End Address */
-    LCD_WriteReg(VERT_ADDR_START_POS,   xStart);    /* Vertical GRAM Start Address */
-    LCD_WriteReg(VERT_ADDR_END_POS,     xEnd);      /* Vertical GRAM Start Address */
+    LCD_WriteReg(HOR_ADDR_START_POS,    yStart  );   /* Horizontal GRAM Start Address    */
+    LCD_WriteReg(HOR_ADDR_END_POS,      yEnd    );   /* Horizontal GRAM End Address      */
+    LCD_WriteReg(VERT_ADDR_START_POS,   xStart  );   /* Vertical GRAM Start Address      */
+    LCD_WriteReg(VERT_ADDR_END_POS,     xEnd    );   /* Vertical GRAM Start Address      */
 
     LCD_SetCursor(xStart, yStart);
 
     // fast write in blocks
     unsigned int len = (unsigned int)(xEnd - xStart + 1) * (unsigned int)(yEnd - yStart + 1);
 
+    LCD_WriteIndex(0x0022);
     LCD_Send( Color );
     BITBAND_PERI(P7->OUT,  2) = 1;   /* RS high */
     for( int index = 0; index < len; index++ )

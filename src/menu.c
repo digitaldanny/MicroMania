@@ -1,3 +1,5 @@
+#define MULTI
+
 /*
  *  menu.c
  *
@@ -146,6 +148,7 @@ void menu_MenuHost ( void )
     P2->OUT &= ~(BIT0 | BIT1 | BIT2); // initialize led's off
     P2->DIR |= (BIT0 | BIT1 | BIT2); // set R.G.B direction
 
+#ifndef SINGLE
     // PUT THIS IN A LOOP LATER ***************************************************
     // HANDSHAKE HERE ----------------------------------------------
     // 3. Try to receive packet from the client until return SUCCESS
@@ -164,6 +167,7 @@ void menu_MenuHost ( void )
         ReceiveData((uint8_t*)&packet_HostToClient.client, sizeof(packet_HostToClient.client));
     } while ( packet_HostToClient.client.acknowledge == false );
     // HANDSHAKE HERE -----------------------------------------------
+#endif
 
     RED_ON;
 

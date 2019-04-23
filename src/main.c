@@ -1,5 +1,5 @@
 #define MAIN
-#define BUTTON_BUG
+#define MULTI
 
 // To run game with different routers, go to the
 // cc3100_usage.h and sl_common.h header files and
@@ -57,7 +57,10 @@ void main(void)
         if (myPlayerType == Host)
         {
             // Initialize HOST-side threads
+#ifndef SINGLE
             initCC3100(Host);
+#endif
+
             G8RTOS_AddThread( &menu_MenuHost, 15, 0xFFFFFFFF, "MENU_HOST" ); // lowest priority
             buttonUP_pressed = false;
             break;
