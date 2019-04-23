@@ -22,6 +22,16 @@
 #define JOYSTICK_BIAS_X     500
 #define JOYSTICK_BIAS_Y     350
 
+#define MAX_NUM_PLAYERS     3
+
+typedef enum
+{
+    UP,
+    DOWN,
+    RIGHT,
+    LEFT
+} dir_t;
+
 /*********************************************** Semaphores ********************************************************************/
 extern semaphore_t CC3100_SEMAPHORE;
 extern semaphore_t LCDREADY;
