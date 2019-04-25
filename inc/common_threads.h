@@ -32,6 +32,12 @@ typedef enum
     LEFT
 } dir_t;
 
+typedef struct
+{
+    int16_t x;
+    int16_t y;
+} point_t;
+
 /*********************************************** Semaphores ********************************************************************/
 extern semaphore_t CC3100_SEMAPHORE;
 extern semaphore_t LCDREADY;
@@ -47,6 +53,7 @@ extern playerType myPlayerType;
 
 /*********************************************** Functions ********************************************************************/
 void common_buttons_init( void );
+void common_checkLCDBoundaries( point_t * point );
 
 /*********************************************** Background Threads *********************************************************************/
 void common_IdleThread ( void );

@@ -62,6 +62,17 @@ void common_buttons_init( void )
     NVIC_SetPriority(PORT5_IRQn, 0);
 }
 
+// This function checks that the LCD is not being written past its
+// boundaries ( x > 320 or x < 0, y > 240 or y < 0 )
+void common_checkLCDBoundaries( point_t * point )
+{
+    if ( point->x >= MAX_SCREEN_X )         point->x = MAX_SCREEN_X - 1;
+    else if ( point->x <= MIN_SCREEN_X )    point->x = MIN_SCREEN_X;
+
+    if ( point->y >= MAX_SCREEN_Y )         point->y = MAX_SCREEN_Y - 1;
+    else if ( point->y <= MIN_SCREEN_Y )    point->y = MIN_SCREEN_Y;
+}
+
 /*********************************************** Common Aperiodic Threads *********************************************************************/
 void common_ButtonPress ( void )
 {
