@@ -17,12 +17,20 @@
 #include "game4.h"
 /*********************************************** Includes ********************************************************************/
 
+// HARDWARE MACROS ------------------------
 #define RED_ON              P2->OUT |= BIT0
 #define RED_OFF             P2->OUT &= ~BIT0
 #define GREEN_ON            P2->OUT |= BIT1
 #define GREEN_OFF           P2->OUT &= ~BIT1
 #define BLUE_ON             P2->OUT |= BIT2
 #define BLUE_OFF            P2->OUT &= ~BIT2
+
+
+// GAME PROPERTY MACROS -------------------
+#define G_PAC_MAN   0
+#define G_DODGEBALL 1
+#define G_SNAKE     2
+#define G_SUMO      3
 
 /*
  * ======================

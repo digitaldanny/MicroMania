@@ -10,9 +10,7 @@
  *  main.c
  *
  *  UPDATES :
- *  3/29/2019   : File initialization.
- *  4/2/2019    : Connect to game as Host or Client.
- *	4/10/2019	: LCD and LED semaphores initialized.
+ *  4/18/2019   : File initialization.
  *
  *  TODO    :
  *  ~  Remove BUTTON_BUG directive once Daniel's board has been
