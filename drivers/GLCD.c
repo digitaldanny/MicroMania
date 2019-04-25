@@ -531,8 +531,8 @@ void LCD_fillCircle(int poX, int poY, int r,uint16_t color){
     int x = -r, y = 0, err = 2-2*r, e2;
     do {
 
-        LCD_DrawLine(poX-x,poY-y, poX-x, poY + y,color);
-        LCD_DrawLine(poX+x,poY-y, poX+x, poY + y,color);
+        LCD_DrawRectangle(poX-x,poX-x, poY-y, poY + y,color);
+        LCD_DrawRectangle(poX+x,poX+x, poY-y, poY + y,color);
 
         e2 = err;
         if (e2 <= y) {
