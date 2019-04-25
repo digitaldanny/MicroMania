@@ -3,20 +3,20 @@
 **                                 http://www.powermcu.com
 **
 **--------------File Info-------------------------------------------------------------------------------
-** File name:			GLCD.h
-** Descriptions:		TFT (IO)
+** File name:           GLCD.h
+** Descriptions:        TFT (IO)
 **
 **------------------------------------------------------------------------------------------------------
-** Created by:			AVRman
-** Created date:		2011-1-26
-** Version:				1.0
-** Descriptions:		The original version
+** Created by:          AVRman
+** Created date:        2011-1-26
+** Version:             1.0
+** Descriptions:        The original version
 **
 **------------------------------------------------------------------------------------------------------
-** Modified by:			
-** Modified date:	
+** Modified by:
+** Modified date:
 ** Version:
-** Descriptions:		
+** Descriptions:
 ********************************************************************************************************/
 #include "msp.h"
 #ifndef __GLCD_H 
@@ -30,9 +30,9 @@
 
 /* LCD Interface */
 #define PIN_CS      (1 << 8)
-#define PIN_RS		(1 << 27)
-#define PIN_WR		(1 << 28)
-#define PIN_RD		(1 << 29)   
+#define PIN_RS      (1 << 27)
+#define PIN_WR      (1 << 28)
+#define PIN_RD      (1 << 29)
 
 //#define LCD_CS(x)   ((x) ? GPIO_SetValue(2, PIN_CS ) : GPIO_ClearValue(2, PIN_CS ) );
 #define LCD_CS(x)   ((x) ? (LPC_GPIO2->FIOSET = PIN_CS) : (LPC_GPIO2->FIOCLR = PIN_CS));
@@ -179,10 +179,10 @@
 * Description    : 24bit to 16bit color
 * Input          : - red: R
 *                  - green: G 
-*		   - blue: B
+*          - blue: B
 * Output         : None
 * Return         : RGB color
-* Attention	 : None
+* Attention  : None
 *******************************************************************************/
 #define RGB565CONVERT(red, green, blue)\
 (uint16_t)( (( red   >> 3 ) << 11 ) | \
@@ -198,7 +198,7 @@ void LCD_DrawLine( uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1 , uint16_t
 void PutChar( uint16_t Xpos, uint16_t Ypos, uint8_t ASCI, uint16_t charColor); //, uint16_t bkColor );
 void LCD_Text(uint16_t Xpos, uint16_t Ypos, uint8_t *str,uint16_t Color); //, uint16_t bkColor);
 void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, uint16_t Color);
-
+void LCD_fillCircle(int poX, int poY, int r,uint16_t color);
 #endif 
 
 /*********************************************************************************************************
