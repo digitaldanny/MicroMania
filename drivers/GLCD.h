@@ -73,7 +73,7 @@
 #define Green          0x07E0
 #define Cyan           0x7FFF
 #define Yellow         0xFFE0
-
+#define Orange         0xFD20
 /* ORIGINAL DRIVER MACROS */
 /* Screen size */
 #define MAX_SCREEN_X     320

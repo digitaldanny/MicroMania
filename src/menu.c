@@ -347,8 +347,8 @@ void ExitMenuHost ( void )
     else if ( packet_HostToClient.game_number == G_SUMO )
         G8RTOS_AddThread(&game4_CreateGame, 16, 0xFFFFFFFF, "CREATE_SUMO");
      */
-    if ( packet_HostToClient.game_number == G_SNAKE )
-        G8RTOS_AddThread(&game3_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
+    //if ( packet_HostToClient.game_number == G_DODGEBALL )
+        G8RTOS_AddThread(&Game2_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
 
     // reset so a choice can be made again later
     packet_HostToClient.choice_made = false;
