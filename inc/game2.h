@@ -112,6 +112,8 @@ typedef struct
     int16_t CenterX;
     int16_t CenterY;
 }Game2_PrevPlayer_t;
+
+
 /*********************************************** Client Threads *********************************************************************/
 /*
  * Thread for client to join game
@@ -207,5 +209,8 @@ void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color);
 
 /*********************************************** Aperiodic Threads *********************************************************************/
 void Game2_ButtonPress ( void );
+
+/*********************************************** image arrays *********************************************************************/
+
 
 #endif /* INC_GAME2_H_ */
