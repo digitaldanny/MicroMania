@@ -199,7 +199,7 @@ void Game2_InitBoardState(uint8_t num_lives, uint16_t P1_runTime, uint16_t P2_ru
 
 void Game2_UpdatePlayerStatus();
 
-void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer);
+void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer, int ID);
 
 void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * currentBall, uint16_t outColor);
 

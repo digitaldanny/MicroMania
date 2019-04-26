@@ -29,7 +29,10 @@ uint32_t Start_time = 0;
 int16_t Game2_displacementX = 0;
 int16_t Game2_displacementY = 0;
 //image arrays
-uint16_t mario_red_map[] = {
+//12x16 image size
+#define MARIO_COLUMNS 12
+#define MARIO_ROWS 16
+uint16_t mario_red_map[16][12] = {
 
   /*Pixel format: Red: 5 bit, Green: 6 bit, Blue: 5 bit*/
   0xffff, 0xffff, 0xffff, 0xe4f0, 0xe4f0, 0xe4f0, 0xe4f0, 0xe4f0, 0xffff, 0xffff, 0xffff, 0xffff,
@@ -47,7 +50,7 @@ uint16_t mario_red_map[] = {
   0x36f7, 0x36f7, 0x5942, 0x5942, 0x5942, 0x5942, 0x5942, 0x5942, 0x5942, 0x5942, 0x36f7, 0x36f7,
   0xffff, 0xffff, 0x5942, 0x5942, 0x5942, 0xffff, 0xffff, 0x5942, 0x5942, 0x5942, 0xffff, 0xffff,
   0xffff, 0x0388, 0x0388, 0x0388, 0xffff, 0xffff, 0xffff, 0xffff, 0x0388, 0x0388, 0x0388, 0xffff,
-  0x0388, 0x0388, 0x0388, 0x0388, 0xffff, 0xffff, 0xffff, 0xffff, 0x0388, 0x0388, 0x0388, 0x0388,
+  0x0388, 0x0388, 0x0388, 0x0388, 0xffff, 0xffff, 0xffff, 0xffff, 0x0388, 0x0388, 0x0388, 0x0388
 };
 //add host threads
 void Game2_addHostThreads(){
@@ -444,7 +447,7 @@ void Game2_DrawObjects()
             // update the parts that need to be redrawn.
             else
             {
-                Game2_UpdatePlayerOnScreen( &prevPlayers[i], &gamestate.players[i]);
+                Game2_UpdatePlayerOnScreen( &prevPlayers[i], &gamestate.players[i], i);
             }
         }
 
@@ -543,7 +546,7 @@ void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color)
  * Updates player based on current and new center
  *
  */
-void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer)
+void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer, int ID)
 {
     // only update the player if it's center moved
     if ( prevPlayerIn->CenterX != outPlayer->currentCenterX || prevPlayerIn->CenterY != outPlayer->currentCenterY )
@@ -551,15 +554,64 @@ void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_General
         // all smart common area saving was deleted here to generalize for the quiz.
         G8RTOS_WaitSemaphore(&LCDREADY);
 
+
+        if(ID == 0){
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_ROWS; j++){
+                    LCD_SetPoint(prevPlayerIn->CenterX, prevPlayerIn->CenterY, BACK_COLOR);
+                    //LCD_SetPoint(outPlayer->currentCenterX, outPlayer->currentCenterY, mario_red_map[i][j]);
+                }
+            }
+
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_ROWS; j++){
+                    //LCD_SetPoint(prevPlayerIn->CenterX, prevPlayerIn->CenterY, BACK_COLOR);
+                    LCD_SetPoint(outPlayer->currentCenterX, outPlayer->currentCenterY, mario_red_map[i][j]);
+                }
+            }
+        }
+        else if(ID == 1){
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_ROWS; j++){
+                    LCD_SetPoint(prevPlayerIn->CenterX, prevPlayerIn->CenterY, BACK_COLOR);
+                    //LCD_SetPoint(outPlayer->currentCenterX, outPlayer->currentCenterY, mario_red_map[i][j]);
+                }
+            }
+
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_ROWS; j++){
+                    //LCD_SetPoint(prevPlayerIn->CenterX, prevPlayerIn->CenterY, BACK_COLOR);
+                    LCD_SetPoint(outPlayer->currentCenterX, outPlayer->currentCenterY, mario_red_map[i][j]);
+                }
+            }
+        }
+        else {
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_ROWS; j++){
+                    LCD_SetPoint(prevPlayerIn->CenterX, prevPlayerIn->CenterY, BACK_COLOR);
+                    //LCD_SetPoint(outPlayer->currentCenterX, outPlayer->currentCenterY, mario_red_map[i][j]);
+                }
+            }
+
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_ROWS; j++){
+                    //LCD_SetPoint(prevPlayerIn->CenterX, prevPlayerIn->CenterY, BACK_COLOR);
+                    LCD_SetPoint(outPlayer->currentCenterX, outPlayer->currentCenterY, mario_red_map[i][j]);
+                }
+            }
+        }
+
+        /*
         // // erase the UNCOMMON old player position first
         LCD_DrawRectangle(prevPlayerIn->CenterX - PLAYER_OFFSET, prevPlayerIn->CenterX + PLAYER_OFFSET,
                           prevPlayerIn->CenterY - PLAYER_OFFSET, prevPlayerIn->CenterY + PLAYER_OFFSET, LCD_BLACK);
 
 
+
         // // draw the UNCOMMON updated player position
         LCD_DrawRectangle(outPlayer->currentCenterX - PLAYER_OFFSET, outPlayer->currentCenterX + PLAYER_OFFSET,
                           outPlayer->currentCenterY - PLAYER_OFFSET, outPlayer->currentCenterY + PLAYER_OFFSET, outPlayer->color);
-
+         */
         // wrapping the data update doesn't allow the players to update twice
         // before erasing the original
         prevPlayerIn->CenterX = outPlayer->currentCenterX;
