@@ -632,7 +632,7 @@ void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEn
     LCD_SetCursor(xStart, yStart);
 
     // fast write in blocks
-    unsigned int len = (unsigned int)(xEnd - xStart + 1) * (unsigned int)(yEnd - yStart + 1);
+    unsigned int len = (unsigned int) abs((xEnd - xStart + 1) * (unsigned int)(yEnd - yStart + 1));
 
     LCD_WriteIndex(0x0022);
     LCD_Send( Color );
