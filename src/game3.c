@@ -44,6 +44,18 @@ point_t mappedCenterEndDraw;
 point_t mappedCenterStartErase;
 point_t mappedCenterEndErase;
 
+// left border init ----------------------------------------
+point_t startPointLeft;             point_t endPointLeft;
+
+// right border init ----------------------------------------
+point_t startPointRight;             point_t endPointRight;
+
+// top border init ----------------------------------------
+point_t startPointTop;             point_t endPointTop;
+
+// bottom border init ----------------------------------------
+point_t startPointBottom;             point_t endPointBottom;
+
 // other globals --------------
 int16_t avgX = 0;
 int16_t avgY = 0;
@@ -117,6 +129,47 @@ void game3_InitBoardState()
             }
         }
     }
+
+    // INITIALIZE THE GAME BORDERS --------------------------------------------
+    // Draw left border ----------------------
+    mapObjectToMe(&endPointLeft, &mappedCenterEndDraw);
+    common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+    LCD_DrawRectangle(0,
+                      mappedCenterEndDraw.x,
+                      0,
+                      MAX_SCREEN_Y - 1,
+                      LCD_BLACK);
+
+    // Draw right border ----------------------
+    mapObjectToMe(&endPointRight, &mappedCenterEndDraw);
+    common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+    LCD_DrawRectangle(mappedCenterEndDraw.x,
+                      MAX_SCREEN_X - 1,
+                      0,
+                      MAX_SCREEN_Y - 1,
+                      LCD_BLACK);
+
+    // Draw top border ------------------------
+    mapObjectToMe(&endPointTop, &mappedCenterEndDraw);
+    common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+    LCD_DrawRectangle(0,
+                      MAX_SCREEN_X - 1,
+                      0,
+                      mappedCenterEndDraw.y,
+                      LCD_BLACK);
+
+    // Draw bottom border ---------------------
+    mapObjectToMe(&endPointBottom, &mappedCenterEndDraw);
+    common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+    LCD_DrawRectangle(0,
+                      MAX_SCREEN_X - 1,
+                      mappedCenterEndDraw.y,
+                      MAX_SCREEN_Y - 1,
+                      LCD_BLACK);
 }
 
 /*********************************************** Game Functions *********************************************************************/
@@ -342,6 +395,170 @@ void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t 
     }
 }
 
+// This function draws all the map borders based on the size of the
+// predefined max and min sizes
+void game3_updateBorders()
+{
+    for (int ii = 0; ii < 4; ii++)
+    {
+        // LEFT BORDER --------------------------------
+        if ( ii == 0 )
+        {
+            mapObjectToPrev(1, &startPointLeft, &mappedCenterStartErase);
+            mapObjectToPrev(1, &endPointLeft, &mappedCenterEndErase);
+
+            common_checkLCDBoundaries(&mappedCenterStartErase);
+            common_checkLCDBoundaries(&mappedCenterEndErase);
+
+            mapObjectToMe(&startPointLeft, &mappedCenterStartDraw);
+            mapObjectToMe(&endPointLeft, &mappedCenterEndDraw);
+
+            common_checkLCDBoundaries(&mappedCenterStartDraw);
+            common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+            my_prev->er_center1 = me->center;
+
+            // DRAW BLOCKS OF NEW BORDER ------------------------------
+            // erase the previous left border line --------------------
+            if ( me->dir == RIGHT )
+            {
+                LCD_DrawRectangle(mappedCenterStartDraw.x,
+                                  mappedCenterEndErase.x,
+                                  mappedCenterStartErase.y,
+                                  mappedCenterEndErase.y,
+                                  LCD_WHITE);
+            }
+
+            // write the new left border line --------------------------
+            else if ( me->dir == LEFT )
+            {
+                LCD_DrawRectangle(mappedCenterStartErase.x,
+                                  mappedCenterEndDraw.x,
+                                  mappedCenterStartDraw.y,
+                                  mappedCenterEndDraw.y,
+                                  LCD_BLACK);
+            }
+        }
+
+        // RIGHT BORDER UPDATE ----------------------------------
+        else if ( ii == 1 )
+        {
+            mapObjectToPrev(2, &startPointRight, &mappedCenterStartErase);
+            mapObjectToPrev(2, &endPointRight, &mappedCenterEndErase);
+
+            common_checkLCDBoundaries(&mappedCenterStartErase);
+            common_checkLCDBoundaries(&mappedCenterEndErase);
+
+            mapObjectToMe(&startPointRight, &mappedCenterStartDraw);
+            mapObjectToMe(&endPointRight, &mappedCenterEndDraw);
+
+            common_checkLCDBoundaries(&mappedCenterStartDraw);
+            common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+            my_prev->er_center2 = me->center;
+
+            // DRAW BLOCKS OF NEW BORDER ------------------------------
+            // erase the previous left border line --------------------
+            if ( me->dir == LEFT )
+            {
+                LCD_DrawRectangle(mappedCenterStartErase.x,
+                                  mappedCenterEndDraw.x,
+                                  mappedCenterStartErase.y,
+                                  mappedCenterEndErase.y,
+                                  LCD_WHITE);
+            }
+
+            // write the new left border line --------------------------
+            else if ( me->dir == RIGHT )
+            {
+                LCD_DrawRectangle(mappedCenterStartDraw.x,
+                                  mappedCenterEndErase.x,
+                                  mappedCenterStartDraw.y,
+                                  mappedCenterEndDraw.y,
+                                  LCD_BLACK);
+            }
+        }
+
+        // TOP BORDER UPDATE ------------------------------------
+        else if ( ii == 2 )
+        {
+            mapObjectToPrev(3, &startPointTop, &mappedCenterStartErase);
+            mapObjectToPrev(3, &endPointTop, &mappedCenterEndErase);
+
+            common_checkLCDBoundaries(&mappedCenterStartErase);
+            common_checkLCDBoundaries(&mappedCenterEndErase);
+
+            mapObjectToMe(&startPointTop, &mappedCenterStartDraw);
+            mapObjectToMe(&endPointTop, &mappedCenterEndDraw);
+
+            common_checkLCDBoundaries(&mappedCenterStartDraw);
+            common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+            my_prev->er_center3 = me->center;
+
+            // DRAW BLOCKS OF NEW BORDER ------------------------------
+            // erase the previous left border line --------------------
+            if ( me->dir == DOWN )
+            {
+                LCD_DrawRectangle(mappedCenterStartDraw.x,
+                                  mappedCenterEndErase.x,
+                                  mappedCenterStartDraw.y,
+                                  mappedCenterEndErase.y,
+                                  LCD_WHITE);
+            }
+
+            // write the new left border line --------------------------
+            else if ( me->dir == UP )
+            {
+                LCD_DrawRectangle(mappedCenterStartDraw.x,
+                                  mappedCenterEndDraw.x,
+                                  mappedCenterStartErase.y,
+                                  mappedCenterEndDraw.y,
+                                  LCD_BLACK);
+            }
+        }
+
+        // BOTTOM BORDER UPDATE ---------------------------------
+        else if ( ii == 3 )
+        {
+            mapObjectToPrev(4, &startPointBottom, &mappedCenterStartErase);
+            mapObjectToPrev(4, &endPointBottom, &mappedCenterEndErase);
+
+            common_checkLCDBoundaries(&mappedCenterStartErase);
+            common_checkLCDBoundaries(&mappedCenterEndErase);
+
+            mapObjectToMe(&startPointBottom, &mappedCenterStartDraw);
+            mapObjectToMe(&endPointBottom, &mappedCenterEndDraw);
+
+            common_checkLCDBoundaries(&mappedCenterStartDraw);
+            common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+            my_prev->er_center4 = me->center;
+
+            // DRAW BLOCKS OF NEW BORDER ------------------------------
+            // write the new left border line --------------------------
+            if ( me->dir == UP )
+            {
+                LCD_DrawRectangle(mappedCenterStartDraw.x,
+                                  mappedCenterEndDraw.x,
+                                  mappedCenterStartErase.y,
+                                  mappedCenterEndDraw.y,
+                                  LCD_WHITE);
+            }
+
+            // erase the previous left border line --------------------
+            else if ( me->dir == DOWN )
+            {
+                LCD_DrawRectangle(mappedCenterStartDraw.x,
+                                  mappedCenterEndDraw.x,
+                                  mappedCenterStartDraw.y,
+                                  mappedCenterEndErase.y,
+                                  LCD_BLACK);
+            }
+        }
+    }
+}
+
 /*********************************************** Client Threads *********************************************************************/
 /*
  * Thread for client to join game
@@ -396,6 +613,23 @@ void game3_CreateGame()
     LCD_Clear(LCD_GREEN);
     LCD_Text(8*10, 16*10, "Connecting to SNAKE clients..", LCD_WHITE);
 
+    // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
+    // left border init ----------------------------------------
+    startPointLeft.x = SN_MAP_MIN_X;    startPointLeft.y = SN_MAP_MIN_Y;
+    endPointLeft.x = SN_MAP_MIN_X;      endPointLeft.y = SN_MAP_MAX_Y;
+
+    // right border init ----------------------------------------
+    startPointRight.x = SN_MAP_MAX_X;    startPointRight.y = SN_MAP_MIN_Y;
+    endPointRight.x = SN_MAP_MAX_X;      endPointRight.y = SN_MAP_MAX_Y;
+
+    // top border init ----------------------------------------
+    startPointTop.x = SN_MAP_MIN_X;    startPointTop.y = SN_MAP_MIN_Y;
+    endPointTop.x = SN_MAP_MAX_X;      endPointTop.y = SN_MAP_MIN_Y;
+
+    // bottom border init ----------------------------------------
+    startPointBottom.x = SN_MAP_MIN_X;    startPointBottom.y = SN_MAP_MAX_Y;
+    endPointBottom.x = SN_MAP_MAX_X;      endPointBottom.y = SN_MAP_MAX_Y;
+
     // packet initializations
     // Initialize the game number and previous game number to -1 so they
     // are INVALID game numbers so they will write on the first valid game number,
@@ -414,9 +648,10 @@ void game3_CreateGame()
         game3_HostToClient.players[i].center.x = SN_SNAKE_SIZE * (rand() % (SN_MAP_MAX_X/SN_SNAKE_SIZE)) + SN_MAP_MIN_X;
         game3_HostToClient.players[i].center.y = SN_SNAKE_SIZE * (rand() % (SN_MAP_MAX_Y/SN_SNAKE_SIZE)) + SN_MAP_MIN_Y;
 
-        // INIT PREVIOUS PLAYER CENTERS TO INVALID DATA
-        prevPlayers[i].center.x = -500;
-        prevPlayers[i].center.y = -500;
+        // Initialize previous center data to be different than the current center
+        // so the borders are initialized approximately correct
+        prevPlayers[i].center.x = game3_HostToClient.players[i].center.x - 1;
+        prevPlayers[i].center.y = game3_HostToClient.players[i].center.y - 1;
         prevPlayers[i].dir = DOWN;
     }
 
@@ -440,8 +675,8 @@ void game3_CreateGame()
         // search for a center value that is not currently taken
         while ( 1 )
         {
-            tempX = SN_FOOD_SIZE * (rand() % (SN_MAP_MAX_X/SN_FOOD_SIZE)) + SN_MAP_MIN_X;
-            tempY = SN_FOOD_SIZE * (rand() % (SN_MAP_MAX_Y/SN_FOOD_SIZE)) + SN_MAP_MIN_Y;
+            tempX = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_X - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_X + SN_FOOD_SIZE;
+            tempY = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_Y - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_Y + SN_FOOD_SIZE;
 
             // make sure the center does not match any of the
             // current player centers
@@ -675,26 +910,6 @@ void game3_DrawObjects()
     game3_Food_t * food;
     point_t mappedCenter;
 
-    // left border init ----------------------------------------
-    point_t startPointLeft;             point_t endPointLeft;
-    startPointLeft.x = SN_MAP_MIN_X;    startPointLeft.y = SN_MAP_MIN_Y;
-    endPointLeft.x = SN_MAP_MIN_X;      endPointLeft.y = SN_MAP_MAX_Y;
-
-    // right border init ----------------------------------------
-    point_t startPointRight;             point_t endPointRight;
-    startPointRight.x = SN_MAP_MAX_X;    startPointRight.y = SN_MAP_MIN_Y;
-    endPointRight.x = SN_MAP_MAX_X;      endPointRight.y = SN_MAP_MAX_Y;
-
-    // top border init ----------------------------------------
-    point_t startPointTop;             point_t endPointTop;
-    startPointTop.x = SN_MAP_MIN_X;    startPointTop.y = SN_MAP_MIN_Y;
-    endPointTop.x = SN_MAP_MAX_X;      endPointTop.y = SN_MAP_MIN_Y;
-
-    // bottom border init ----------------------------------------
-    point_t startPointBottom;             point_t endPointBottom;
-    startPointBottom.x = SN_MAP_MIN_X;    startPointBottom.y = SN_MAP_MAX_Y;
-    endPointBottom.x = SN_MAP_MAX_X;      endPointBottom.y = SN_MAP_MAX_Y;
-
     for ( int i = 0; i < SN_MAX_FOOD_ON_MAP; i++ )
     {
         prevFood[i].center.x = -1;
@@ -758,68 +973,72 @@ void game3_DrawObjects()
          * ======================================================
          */
         // loop through all food items -----------------
-        // Draw all food near players
         for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
         {
             food = &local_food[i];
 
             // UPDATE THE FOOD DRAWING IF IT IS WITHIN RANGE OF THE PLAYER
-            // if ( food->alive && !food->kill )
-            // {
-            //     mapObjectToMe(&food->center, &mappedCenter);
-            //
-            //     // only draw the food if it is within range after being mapped to the
-            //     // player's center
-            //     if (withinPlayerRange(&mappedCenter))
-            //     {
-            //         // erase the old position if this is not an initialization
-            //         if ( prevFood[i].center.x != -1 )
-            //         {
-            //             LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
-            //                               prevFood[i].center.x + SN_FOOD_SIZE / 2,
-            //                               prevFood[i].center.y - SN_FOOD_SIZE / 2,
-            //                               prevFood[i].center.y + SN_FOOD_SIZE / 2,
-            //                               SN_BG_COLOR);
-            //         }
-            //
-            //         // update the previous array
-            //         prevFood[i].center = mappedCenter;
-            //
-            //         // draw the new position
-            //         LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-            //                           mappedCenter.x + SN_FOOD_SIZE / 2,
-            //                           mappedCenter.y - SN_FOOD_SIZE / 2,
-            //                           mappedCenter.y + SN_FOOD_SIZE / 2,
-            //                           SN_FOOD_COLOR);
-            //     }
-            //
-            //     // if the food is not currently within range of the player, check
-            //     // if the previous position was in the range. If it was within range,
-            //     // make sure to erase that square.
-            //     else if ( withinPlayerRange(&prevFood[i].center) )
-            //     {
-            //         LCD_DrawRectangle( prevFood[i].center.x - SN_FOOD_SIZE / 2,
-            //                            prevFood[i].center.x + SN_FOOD_SIZE / 2,
-            //                            prevFood[i].center.y - SN_FOOD_SIZE / 2,
-            //                            prevFood[i].center.y + SN_FOOD_SIZE / 2,
-            //                            SN_BG_COLOR);
-            //     }
-            // }
-            //
-            // // // ERASE THE FOOD
-            // else if ( !food->alive && food->kill )
-            // {
-            //     prevFood[i].center.x = -1;
-            //     prevFood[i].center.y = -1;
-            //     food->kill = false;
-            //
-            //     LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-            //                       mappedCenter.x + SN_FOOD_SIZE / 2,
-            //                       mappedCenter.y - SN_FOOD_SIZE / 2,
-            //                       mappedCenter.y + SN_FOOD_SIZE / 2,
-            //                       SN_BG_COLOR);
-            // }
-            //
+            if ( food->alive && !food->kill )
+            {
+
+                // only draw the food if it is within range BEFORE being mapped to the
+                // player's center
+                if (withinPlayerRange(&food->center))
+                {
+                    mapObjectToMe(&food->center, &mappedCenter);
+
+                    // erase the old position if this is not an initialization
+                    if ( prevFood[i].center.x < 0 )
+                    {
+                        LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
+                                          prevFood[i].center.x + SN_FOOD_SIZE / 2,
+                                          prevFood[i].center.y - SN_FOOD_SIZE / 2,
+                                          prevFood[i].center.y + SN_FOOD_SIZE / 2,
+                                          SN_BG_COLOR);
+                    }
+
+                    // update the previous array
+                    prevFood[i].center = mappedCenter;
+
+                    // draw the new position
+                    LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
+                                      mappedCenter.x + SN_FOOD_SIZE / 2,
+                                      mappedCenter.y - SN_FOOD_SIZE / 2,
+                                      mappedCenter.y + SN_FOOD_SIZE / 2,
+                                      SN_FOOD_COLOR);
+                }
+
+                // if the food is not currently within range of the player, check
+                // if the previous position was in the range. If it was within range,
+                // make sure to erase that square.
+                else if ( withinPlayerRange(&prevFood[i].center) )
+                {
+                    mapObjectToMe(&prevFood[i].center, &mappedCenter);
+
+                    LCD_DrawRectangle( mappedCenter.x - SN_FOOD_SIZE / 2,
+                                       mappedCenter.x + SN_FOOD_SIZE / 2,
+                                       mappedCenter.y - SN_FOOD_SIZE / 2,
+                                       mappedCenter.y + SN_FOOD_SIZE / 2,
+                                       SN_BG_COLOR);
+                }
+            }
+
+            // ERASE THE FOOD
+            else if ( !food->alive && food->kill && withinPlayerRange(&food->center))
+            {
+                mapObjectToMe(&prevFood[i].center, &mappedCenter);
+
+                prevFood[i].center.x = -1;
+                prevFood[i].center.y = -1;
+                food->kill = false;
+
+                LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
+                                  mappedCenter.x + SN_FOOD_SIZE / 2,
+                                  mappedCenter.y - SN_FOOD_SIZE / 2,
+                                  mappedCenter.y + SN_FOOD_SIZE / 2,
+                                  SN_BG_COLOR);
+            }
+
             // // SPAWN NEW FOOD *****************************************8
             // else if ( !food->alive && !food->kill )
             // {
@@ -836,94 +1055,7 @@ void game3_DrawObjects()
          * ======================================================
          */
 
-        for (int ii = 0; ii < 4; ii++)
-        {
-            // LEFT BORDER --------------------------------
-            if ( ii == 0 )
-            {
-                mapObjectToPrev(1, &startPointLeft, &mappedCenterStartErase);
-                mapObjectToPrev(1, &endPointLeft, &mappedCenterEndErase);
-
-                common_checkLCDBoundaries(&mappedCenterStartErase);
-                common_checkLCDBoundaries(&mappedCenterEndErase);
-
-                mapObjectToMe(&startPointLeft, &mappedCenterStartDraw);
-                mapObjectToMe(&endPointLeft, &mappedCenterEndDraw);
-
-                common_checkLCDBoundaries(&mappedCenterStartDraw);
-                common_checkLCDBoundaries(&mappedCenterEndDraw);
-
-                my_prev->er_center1 = me->center;
-            }
-
-            // RIGHT BORDER UPDATE ----------------------------------
-            else if ( ii == 1 )
-            {
-                mapObjectToPrev(2, &startPointRight, &mappedCenterStartErase);
-                mapObjectToPrev(2, &endPointRight, &mappedCenterEndErase);
-
-                common_checkLCDBoundaries(&mappedCenterStartErase);
-                common_checkLCDBoundaries(&mappedCenterEndErase);
-
-                mapObjectToMe(&startPointRight, &mappedCenterStartDraw);
-                mapObjectToMe(&endPointRight, &mappedCenterEndDraw);
-
-                common_checkLCDBoundaries(&mappedCenterStartDraw);
-                common_checkLCDBoundaries(&mappedCenterEndDraw);
-
-                my_prev->er_center2 = me->center;
-            }
-
-            // TOP BORDER UPDATE ------------------------------------
-            else if ( ii == 2 )
-            {
-                mapObjectToPrev(3, &startPointTop, &mappedCenterStartErase);
-                mapObjectToPrev(3, &endPointTop, &mappedCenterEndErase);
-
-                common_checkLCDBoundaries(&mappedCenterStartErase);
-                common_checkLCDBoundaries(&mappedCenterEndErase);
-
-                mapObjectToMe(&startPointTop, &mappedCenterStartDraw);
-                mapObjectToMe(&endPointTop, &mappedCenterEndDraw);
-
-                common_checkLCDBoundaries(&mappedCenterStartDraw);
-                common_checkLCDBoundaries(&mappedCenterEndDraw);
-
-                my_prev->er_center3 = me->center;
-            }
-
-            // BOTTOM BORDER UPDATE ---------------------------------
-            else if ( ii == 3 )
-            {
-                mapObjectToPrev(4, &startPointBottom, &mappedCenterStartErase);
-                mapObjectToPrev(4, &endPointBottom, &mappedCenterEndErase);
-
-                common_checkLCDBoundaries(&mappedCenterStartErase);
-                common_checkLCDBoundaries(&mappedCenterEndErase);
-
-                mapObjectToMe(&startPointBottom, &mappedCenterStartDraw);
-                mapObjectToMe(&endPointBottom, &mappedCenterEndDraw);
-
-                common_checkLCDBoundaries(&mappedCenterStartDraw);
-                common_checkLCDBoundaries(&mappedCenterEndDraw);
-
-                my_prev->er_center4 = me->center;
-            }
-
-            // erase the previous left border line --------------------
-            LCD_DrawRectangle(mappedCenterStartErase.x,
-                              mappedCenterEndErase.x,
-                              mappedCenterStartErase.y,
-                              mappedCenterEndErase.y,
-                              LCD_WHITE);
-
-            // write the new left border line --------------------------
-            LCD_DrawRectangle(mappedCenterStartDraw.x,
-                              mappedCenterEndDraw.x,
-                              mappedCenterStartDraw.y,
-                              mappedCenterEndDraw.y,
-                              LCD_BLACK);
-        }
+        game3_updateBorders();
 
         // reassign the local player's center to be used in border updates next cycle
         my_prev->center = me->center;

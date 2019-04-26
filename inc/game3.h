@@ -18,9 +18,9 @@
 #define SN_UPDATE_PLAYER_POS    10
 
 // GAME MACROS ----------------------
-#define SN_MAX_FOOD_ON_MAP      1
+#define SN_MAX_FOOD_ON_MAP      15
 #define SN_FOOD_SIZE            10
-#define SN_FOOD_SPAWN_RANGE     10
+#define SN_FOOD_SPAWN_RANGE     20
 
 #define SN_DIR_RIGHT        0
 #define SN_DIR_LEFT         1
@@ -133,6 +133,7 @@ typedef struct
 void game3_addHostThreads();    // called by the menu to initialize this game
 void game3_addClientThreads();  // called by the menu to initialize this game
 
+void game3_updateBorders();
 void game3_refreshFood();
 void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t count, int16_t color);
 bool withinPlayerRange(point_t * objectCenter);
