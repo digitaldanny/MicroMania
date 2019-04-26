@@ -7,15 +7,15 @@
  *  Last Edit   : 4/20/2019
  *
  *  UPDATES     :
- *  4/18/2019    : Initialized game functions.
+ *  4/18/2019   : Initialized game functions.
  *  4/20/2019   : Snake head draws and map movement added
  *  4/24/2019   : Map movement stabilized and added boundaries to the map
+ *  4/25/2019   : Added snake head animation drawing
  *
- *  DESCRIPTION : SNAKE.IO
+ *  DESCRIPTION : SLITHER.IO
  *
  *  TODO        :
  *  ~ Write the initializers for multiple clients and the handshake
- *  ~ Make players spawn at a random location
  *  ~ Food should spawn near a random player
  *  ~ Update "me" for client players
  *  ~ Update withinPlayerRange function when ing is implemented
@@ -39,9 +39,14 @@ game3_Food_t local_food[SN_MAX_FOOD_ON_MAP];
 game3_Player_t * me;
 prev_player_t * my_prev;
 
+point_t mappedCenterStartDraw;
+point_t mappedCenterEndDraw;
+point_t mappedCenterStartErase;
+point_t mappedCenterEndErase;
+
 // other globals --------------
-int16_t displacementX = 0;
-int16_t displacementY = 0;
+int16_t avgX = 0;
+int16_t avgY = 0;
 
 /*********************************************** Common Functions *********************************************************************/
 
@@ -51,6 +56,7 @@ int16_t displacementY = 0;
 void game3_InitBoardState()
 {
     game3_Player_t * player;
+    prev_player_t * prevPlayer;
     game3_Food_t * food;
     point_t mappedCenter;
     uint16_t color;
@@ -63,23 +69,29 @@ void game3_InitBoardState()
     // Draw all the players on the map that are alive
     for (int i = 0; i < game3_numPlayers; i++)
     {
+
         player = &game3_HostToClient.players[i];
+        prevPlayer = &prevPlayers[i];
 
         if ( player->alive )
         {
             mapObjectToMe(&player->center, &mappedCenter);
 
             // determine what color the player's snake will be
-            if ( i == 0 ) color = LCD_BLUE;
-            else if ( i == 1 ) color = LCD_GREEN;
-            else if ( i == 2 ) color = LCD_RED;
+            if ( i == 0 ) color = SN_PLAYER1_COLOR;
+            else if ( i == 1 ) color = SN_PLAYER2_COLOR;
+            else if ( i == 2 ) color = SN_PLAYER3_COLOR;
             else color = LCD_PURPLE;
 
-            LCD_DrawRectangle(MAX_SCREEN_X / 2 - SN_SNAKE_SIZE / 2,
-                              MAX_SCREEN_X / 2 + SN_SNAKE_SIZE / 2,
-                              MAX_SCREEN_Y / 2 - SN_SNAKE_SIZE / 2,
-                              MAX_SCREEN_Y / 2 + SN_SNAKE_SIZE / 2,
-                              color);
+            if (withinPlayerRange(&mappedCenter))
+            {
+                game3_drawSnakeHead(prevPlayers[i].dir,
+                                    player->dir,
+                                    mappedCenter.x,
+                                    mappedCenter.y,
+                                    player->animation_count,
+                                    color);
+            }
         }
     }
 
@@ -95,7 +107,7 @@ void game3_InitBoardState()
 
             // only draw the food if it is within range after being mapped to the
             // player's center
-            if (withinPlayerRange(&mappedCenter, &me->center))
+            if (withinPlayerRange(&mappedCenter))
             {
                 LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
                                   mappedCenter.x + SN_FOOD_SIZE / 2,
@@ -154,10 +166,10 @@ void game3_refreshFood()
 
 // This function checks if an object is within a predefined RANGE and returns
 // true if it is
-bool withinPlayerRange(point_t * objectCenter, point_t * myCenter)
+bool withinPlayerRange(point_t * objectCenter)
 {
-    if ( abs(objectCenter->x - myCenter->x) <= SN_DRAW_RANGE_X
-           && abs(objectCenter->y - myCenter->y) <= SN_DRAW_RANGE_Y )
+    if ( abs(objectCenter->x - me->center.x) <= SN_DRAW_RANGE_X
+           && abs(objectCenter->y - me->center.y) <= SN_DRAW_RANGE_Y )
     {
         return true;
     }
@@ -171,7 +183,163 @@ bool withinPlayerRange(point_t * objectCenter, point_t * myCenter)
 void mapObjectToMe(point_t * objectCenter, point_t * mappedCenter)
 {
     mappedCenter->x = (objectCenter->x - me->center.x + MAX_SCREEN_X / 2);
-    mappedCenter->y = (objectCenter->y - me->center.y + MAX_SCREEN_X / 2);
+    mappedCenter->y = (objectCenter->y - me->center.y + MAX_SCREEN_Y / 2);
+}
+
+// This function does the same as mapObjectToMe above except it maps it
+// to the "my_prev" pointer instead of the "me" pointer.
+void mapObjectToPrev(int8_t num, point_t * objectCenter, point_t * mappedCenter)
+{
+    point_t center;
+
+    // this if branch is used to handle errors where the LCD draws the borders
+    // at different cycles where the my->center changes and the border cannot
+    // erase the correct border line.
+    if ( num == 1 )
+        center = my_prev->er_center1;
+    else if ( num == 2 )
+        center = my_prev->er_center2;
+    else if ( num == 3 )
+        center = my_prev->er_center3;
+    else if ( num == 4 )
+        center = my_prev->er_center4;
+    else
+        center = my_prev->center;
+
+    mappedCenter->x = (objectCenter->x - center.x + MAX_SCREEN_X / 2);
+    mappedCenter->y = (objectCenter->y - center.y + MAX_SCREEN_Y / 2);
+}
+
+// This function draws the snake head animation with an increment value
+// that should be sent between gamestates
+void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t count, int16_t color)
+{
+    int16_t eyeX_left;
+    int16_t eyeY_left;
+    int16_t eyeX_right;
+    int16_t eyeY_right;
+
+    int16_t pupilX_left;
+    int16_t pupilY_left;
+    int16_t pupilX_right;
+    int16_t pupilY_right;
+
+    int16_t frameNum = 0;
+
+    // only redraw the snake image if the direction has changed
+    // or if the animation needs to play
+    if ( prevDir != dir || !(count > 0 && count < SN_SNAKE_FRAME_1) )
+    {
+        // Base box
+        LCD_DrawRectangle(x - SN_SNAKE_SIZE / 2,
+                          x + SN_SNAKE_SIZE / 2,
+                          y - SN_SNAKE_SIZE / 2,
+                          y + SN_SNAKE_SIZE / 2,
+                          color);
+
+        // Rotation handling
+        if ( dir == UP )
+        {
+            eyeX_left = -2;     // X
+            eyeY_left = -2;     // X
+            eyeX_right = 2;     // X
+            eyeY_right = -2;    // X
+
+            pupilX_left = -1;   // X
+            pupilY_left = -3;   // X
+            pupilX_right = 1;   // X
+            pupilY_right = -3;  // X
+        }
+        else if ( dir == DOWN )
+        {
+            eyeX_left = -2;     // X
+            eyeY_left = 2;      // X
+            eyeX_right = 2;     // X
+            eyeY_right = 2;     // X
+
+            pupilX_left = -1;   // X
+            pupilY_left = 3;    // X
+            pupilX_right = 1;   // X
+            pupilY_right = 3;   // X
+        }
+        else if ( dir == RIGHT )
+        {
+            eyeX_left = 2;      // X
+            eyeY_left = -2;     // X
+            eyeX_right = 2;     // X
+            eyeY_right = 2;     // X
+
+            pupilX_left = 3;    // X
+            pupilY_left = -1;   // X
+            pupilX_right = 3;   // X
+            pupilY_right = 1;   // X
+        }
+        else if ( dir == LEFT )
+        {
+            eyeX_left = -2;      // X
+            eyeY_left = -2;     // X
+            eyeX_right = -2;     // X
+            eyeY_right = 2;     // X
+
+            pupilX_left = -3;    // X
+            pupilY_left = -1;   // X
+            pupilX_right = -3;   // X
+            pupilY_right = 1;   // X
+        }
+
+        // animation frame number handling
+        if ( count < SN_SNAKE_FRAME_0 )         frameNum = 0;
+        else if ( count < SN_SNAKE_FRAME_1 )    frameNum = 1;
+        else if ( count < SN_SNAKE_FRAME_2 )    frameNum = 2;
+        else if ( count < SN_SNAKE_FRAME_3 )    frameNum = 3;
+        else if ( count < SN_SNAKE_FRAME_4 )    frameNum = 4;
+        else if ( count < SN_SNAKE_FRAME_5 )    frameNum = 3;
+        else if ( count < SN_SNAKE_FRAME_6 )    frameNum = 2;
+        else if ( count < SN_SNAKE_FRAME_7 )    frameNum = 1;
+        else                                    frameNum = 0;
+
+        // left eye
+        LCD_fillCircle(x + eyeX_left, y + eyeY_left, 2, LCD_WHITE);
+        LCD_fillCircle(x + pupilX_left, y + pupilY_left, 1, LCD_BLACK);
+
+        // right eye
+        LCD_fillCircle(x + eyeX_right, y + eyeY_right, 2, LCD_WHITE);
+        LCD_fillCircle(x + pupilX_right, y + pupilY_right, 1, LCD_BLACK);
+
+        // Eye closing animation
+        if ( (dir == DOWN) && frameNum > 0 )
+        {
+            LCD_DrawRectangle(x - SN_SNAKE_SIZE / 2,
+                              x + SN_SNAKE_SIZE / 2,
+                              y,
+                              y + frameNum,
+                              color);
+        }
+        else if ( (dir == UP) && frameNum > 0 )
+        {
+            LCD_DrawRectangle(x - SN_SNAKE_SIZE / 2,
+                              x + SN_SNAKE_SIZE / 2,
+                              y - frameNum,
+                              y,
+                              color);
+        }
+        else if ( (dir == RIGHT) && frameNum > 0 )
+        {
+            LCD_DrawRectangle(x,
+                              x + frameNum,
+                              y - SN_SNAKE_SIZE / 2,
+                              y + SN_SNAKE_SIZE / 2,
+                              color);
+        }
+        else if ( (dir == LEFT) && frameNum > 0 )
+        {
+            LCD_DrawRectangle(x - frameNum,
+                              x,
+                              y - SN_SNAKE_SIZE / 2,
+                              y + SN_SNAKE_SIZE / 2,
+                              color);
+        }
+    }
 }
 
 /*********************************************** Client Threads *********************************************************************/
@@ -240,14 +408,16 @@ void game3_CreateGame()
         game3_HostToClient.players[i].alive = false;
         game3_HostToClient.players[i].dir = UP;
         game3_HostToClient.players[i].kill = false;
+        game3_HostToClient.players[i].animation_count = 0;
 
         // UPDATE THIS TO BE RANDOM
         game3_HostToClient.players[i].center.x = SN_SNAKE_SIZE * (rand() % (SN_MAP_MAX_X/SN_SNAKE_SIZE)) + SN_MAP_MIN_X;
         game3_HostToClient.players[i].center.y = SN_SNAKE_SIZE * (rand() % (SN_MAP_MAX_Y/SN_SNAKE_SIZE)) + SN_MAP_MIN_Y;
 
         // INIT PREVIOUS PLAYER CENTERS TO INVALID DATA
-        prevPlayers[i].center.x = -1;
-        prevPlayers[i].center.y = -1;
+        prevPlayers[i].center.x = -500;
+        prevPlayers[i].center.y = -500;
+        prevPlayers[i].dir = DOWN;
     }
 
     my_prev = &prevPlayers[0];
@@ -261,16 +431,6 @@ void game3_CreateGame()
     for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
     {
         food = &local_food[i];
-
-        // SPAWNING NEAR A RANDOM PLAYER ONLY TO SAVE MEMORY
-        // Choose a random ALIVE player to spawn new food near
-        // while ( player->alive != true )
-        // {
-        //     player = &game3_HostToClient.players[rand() % MAX_NUM_PLAYERS];
-        // }
-
-        // food->center.x = -SN_FOOD_SPAWN_RANGE/2 + (rand() % SN_FOOD_SPAWN_RANGE + 1) + player->center.x;
-        // food->center.y = -SN_FOOD_SPAWN_RANGE/2 + (rand() % SN_FOOD_SPAWN_RANGE + 1) + player->center.y;
 
         int16_t tempX;
         int16_t tempY;
@@ -394,24 +554,24 @@ void game3_UpdateGamestateHost()
             // Player should only move one block at a time. Determine
             // which direction to move based on which joystick value is
             // highest.
-            if ( abs(displacementX) > abs(displacementY) )
+            if ( abs(avgX) > abs(avgY) && abs(avgX) > 1000 )
             {
-                if ( displacementX >= 0 )   { offsetX = 1;    me->dir = RIGHT; }
-                else                        { offsetX = -1;   me->dir = LEFT;  }
+                if ( avgX >= 0 )   { offsetX = 1;    me->dir = LEFT; }
+                else               { offsetX = -1;   me->dir = RIGHT;  }
 
                 offsetY = 0;
             }
 
-            else if ( abs(displacementX) < abs(displacementY) )
+            else if ( abs(avgX) < abs(avgY) && abs(avgY) > 1000 )
             {
-                if ( displacementY >= 0 )   { offsetY = 1; me->dir = DOWN; }
-                else                        { offsetY = -1; me->dir = UP;  }
+                if ( avgY >= 0 )   { offsetY = 1; me->dir = DOWN; }
+                else               { offsetY = -1; me->dir = UP;  }
 
                 offsetX = 0;
             }
 
             // update the player center by the snake head square size
-            me->center.x += offsetX * SN_SNAKE_SIZE;
+            me->center.x -= offsetX * SN_SNAKE_SIZE;
             me->center.y += offsetY * SN_SNAKE_SIZE;
 
             // Map boundaries to make sure the player does not travel too far
@@ -449,8 +609,6 @@ void game3_SendDataToClient()
     while(1)
     {
         // Move the player in increments of the size of the snake
-        me->center.x += displacementX * SN_SNAKE_SIZE;
-        me->center.y += displacementY * SN_SNAKE_SIZE;
 
         sleep(5);
     }
@@ -472,8 +630,6 @@ void game3_ReceiveDataFromClient()
  */
 void game3_ReadJoystickHost()
 {
-    int16_t avgX = 0;
-    int16_t avgY = 0;
     int16_t joystick_x = 0;
     int16_t joystick_y = 0;
 
@@ -483,10 +639,6 @@ void game3_ReadJoystickHost()
         GetJoystickCoordinates(&joystick_x, &joystick_y);
         avgX = (avgX + joystick_x + JOYSTICK_BIAS_X) >> 1;
         avgY = (avgY + joystick_y + JOYSTICK_BIAS_Y) >> 1;
-
-        // The switch statement was causing about 500 ms of lag
-        displacementX = -(avgX >> 12);
-        displacementY = (avgY >> 12);
 
         sleep(20);  // sleep before updating host's position to make it fair for client
 
@@ -519,11 +671,29 @@ void game3_EndOfGameHost()
 void game3_DrawObjects()
 {
     game3_Player_t * player;
+    prev_player_t * prevPlayer;
     game3_Food_t * food;
     point_t mappedCenter;
 
-    point_t startPoint;
-    point_t endPoint;
+    // left border init ----------------------------------------
+    point_t startPointLeft;             point_t endPointLeft;
+    startPointLeft.x = SN_MAP_MIN_X;    startPointLeft.y = SN_MAP_MIN_Y;
+    endPointLeft.x = SN_MAP_MIN_X;      endPointLeft.y = SN_MAP_MAX_Y;
+
+    // right border init ----------------------------------------
+    point_t startPointRight;             point_t endPointRight;
+    startPointRight.x = SN_MAP_MAX_X;    startPointRight.y = SN_MAP_MIN_Y;
+    endPointRight.x = SN_MAP_MAX_X;      endPointRight.y = SN_MAP_MAX_Y;
+
+    // top border init ----------------------------------------
+    point_t startPointTop;             point_t endPointTop;
+    startPointTop.x = SN_MAP_MIN_X;    startPointTop.y = SN_MAP_MIN_Y;
+    endPointTop.x = SN_MAP_MAX_X;      endPointTop.y = SN_MAP_MIN_Y;
+
+    // bottom border init ----------------------------------------
+    point_t startPointBottom;             point_t endPointBottom;
+    startPointBottom.x = SN_MAP_MIN_X;    startPointBottom.y = SN_MAP_MAX_Y;
+    endPointBottom.x = SN_MAP_MAX_X;      endPointBottom.y = SN_MAP_MAX_Y;
 
     for ( int i = 0; i < SN_MAX_FOOD_ON_MAP; i++ )
     {
@@ -543,23 +713,41 @@ void game3_DrawObjects()
         for (int i = 0; i < MAX_NUM_PLAYERS; i++)
         {
             player = &game3_HostToClient.players[i];
+            prevPlayer = &prevPlayers[i];
 
             if ( player->alive )
             {
-                // If this is another player in the map, update their position
-                // relative the current player's center.
-                if ( i != game3_ClientToHost.playerNumber )
+                // Update each player based on their center relative to "me" center
+                mapObjectToMe(&player->center, &mappedCenter);
+                if ( withinPlayerRange(&mappedCenter) )
                 {
+                    // determine the snake color based on the player number
+                    int16_t color;
+                    if ( i == 0 )       color = SN_PLAYER1_COLOR;
+                    else if ( i == 1 )  color = SN_PLAYER2_COLOR;
+                    else                color = SN_PLAYER3_COLOR;
 
+                    // play the next frame of the snake head animation
+                    if ( mappedCenter.x > 0 && mappedCenter.y > 0 )
+                    {
+                        game3_drawSnakeHead(prevPlayer->dir,
+                                            player->dir,
+                                            mappedCenter.x,
+                                            mappedCenter.y,
+                                            player->animation_count,
+                                            color);
+                    }
                 }
 
-                // If this is the current player, only update the player based
-                // on the new  value.
-                else
-                {
-
-                }
+                // update the player's animation count so the snake's eyes
+                // will open and close. If the count exceeds the animation
+                // count, reset the count so the animation can loop.
+                player->animation_count++;
+                if ( player->animation_count >= SN_SNAKE_FRAME_7 )
+                    player->animation_count = 0;
             }
+
+            prevPlayers[i].dir = player->dir;
         }
 
         /*
@@ -576,67 +764,67 @@ void game3_DrawObjects()
             food = &local_food[i];
 
             // UPDATE THE FOOD DRAWING IF IT IS WITHIN RANGE OF THE PLAYER
-            if ( food->alive && !food->kill )
-            {
-                mapObjectToMe(&food->center, &mappedCenter);
-
-                // only draw the food if it is within range after being mapped to the
-                // player's center
-                if (withinPlayerRange(&mappedCenter, &me->center))
-                {
-                    // erase the old position if this is not an initialization
-                    if ( prevFood[i].center.x != -1 )
-                    {
-                        LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
-                                          prevFood[i].center.x + SN_FOOD_SIZE / 2,
-                                          prevFood[i].center.y - SN_FOOD_SIZE / 2,
-                                          prevFood[i].center.y + SN_FOOD_SIZE / 2,
-                                          SN_BG_COLOR);
-                    }
-
-                    // update the previous array
-                    prevFood[i].center = mappedCenter;
-
-                    // draw the new position
-                    LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-                                      mappedCenter.x + SN_FOOD_SIZE / 2,
-                                      mappedCenter.y - SN_FOOD_SIZE / 2,
-                                      mappedCenter.y + SN_FOOD_SIZE / 2,
-                                      SN_FOOD_COLOR);
-                }
-
-                // if the food is not currently within range of the player, check
-                // if the previous position was in the range. If it was within range,
-                // make sure to erase that square.
-                else if ( withinPlayerRange(&prevFood[i].center, &me->center) )
-                {
-                    LCD_DrawRectangle( prevFood[i].center.x - SN_FOOD_SIZE / 2,
-                                       prevFood[i].center.x + SN_FOOD_SIZE / 2,
-                                       prevFood[i].center.y - SN_FOOD_SIZE / 2,
-                                       prevFood[i].center.y + SN_FOOD_SIZE / 2,
-                                       SN_BG_COLOR);
-                }
-            }
-
-            // // ERASE THE FOOD
-            else if ( !food->alive && food->kill )
-            {
-                prevFood[i].center.x = -1;
-                prevFood[i].center.y = -1;
-                food->kill = false;
-
-                LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-                                  mappedCenter.x + SN_FOOD_SIZE / 2,
-                                  mappedCenter.y - SN_FOOD_SIZE / 2,
-                                  mappedCenter.y + SN_FOOD_SIZE / 2,
-                                  SN_BG_COLOR);
-            }
-
-            // SPAWN NEW FOOD *****************************************8
-            else if ( !food->alive && !food->kill )
-            {
-                // game3_refreshFood();
-            }
+            // if ( food->alive && !food->kill )
+            // {
+            //     mapObjectToMe(&food->center, &mappedCenter);
+            //
+            //     // only draw the food if it is within range after being mapped to the
+            //     // player's center
+            //     if (withinPlayerRange(&mappedCenter))
+            //     {
+            //         // erase the old position if this is not an initialization
+            //         if ( prevFood[i].center.x != -1 )
+            //         {
+            //             LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
+            //                               prevFood[i].center.x + SN_FOOD_SIZE / 2,
+            //                               prevFood[i].center.y - SN_FOOD_SIZE / 2,
+            //                               prevFood[i].center.y + SN_FOOD_SIZE / 2,
+            //                               SN_BG_COLOR);
+            //         }
+            //
+            //         // update the previous array
+            //         prevFood[i].center = mappedCenter;
+            //
+            //         // draw the new position
+            //         LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
+            //                           mappedCenter.x + SN_FOOD_SIZE / 2,
+            //                           mappedCenter.y - SN_FOOD_SIZE / 2,
+            //                           mappedCenter.y + SN_FOOD_SIZE / 2,
+            //                           SN_FOOD_COLOR);
+            //     }
+            //
+            //     // if the food is not currently within range of the player, check
+            //     // if the previous position was in the range. If it was within range,
+            //     // make sure to erase that square.
+            //     else if ( withinPlayerRange(&prevFood[i].center) )
+            //     {
+            //         LCD_DrawRectangle( prevFood[i].center.x - SN_FOOD_SIZE / 2,
+            //                            prevFood[i].center.x + SN_FOOD_SIZE / 2,
+            //                            prevFood[i].center.y - SN_FOOD_SIZE / 2,
+            //                            prevFood[i].center.y + SN_FOOD_SIZE / 2,
+            //                            SN_BG_COLOR);
+            //     }
+            // }
+            //
+            // // // ERASE THE FOOD
+            // else if ( !food->alive && food->kill )
+            // {
+            //     prevFood[i].center.x = -1;
+            //     prevFood[i].center.y = -1;
+            //     food->kill = false;
+            //
+            //     LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
+            //                       mappedCenter.x + SN_FOOD_SIZE / 2,
+            //                       mappedCenter.y - SN_FOOD_SIZE / 2,
+            //                       mappedCenter.y + SN_FOOD_SIZE / 2,
+            //                       SN_BG_COLOR);
+            // }
+            //
+            // // SPAWN NEW FOOD *****************************************8
+            // else if ( !food->alive && !food->kill )
+            // {
+            //     // game3_refreshFood();
+            // }
 
         }
 
@@ -648,49 +836,94 @@ void game3_DrawObjects()
          * ======================================================
          */
 
-        // mapObjectToMe(&me->center, &mappedCenter);
-
-        // LEFT BORDER UPDATE -----------------------------------
-        // This center.x must be compared to the actual map
-        // dimensions.
-        if ( me->center.x < SN_DRAW_RANGE_X / 2 )
+        for (int ii = 0; ii < 4; ii++)
         {
-            startPoint.x    = MAX_SCREEN_X / 2 - my_prev->center.x;
-            startPoint.y    = MAX_SCREEN_Y / 2 - my_prev->center.y;
-            endPoint.x      = MAX_SCREEN_X / 2 - my_prev->center.x;
-            endPoint.y      = MAX_SCREEN_Y - 1 + my_prev->center.y;
+            // LEFT BORDER --------------------------------
+            if ( ii == 0 )
+            {
+                mapObjectToPrev(1, &startPointLeft, &mappedCenterStartErase);
+                mapObjectToPrev(1, &endPointLeft, &mappedCenterEndErase);
 
-            common_checkLCDBoundaries(&startPoint);
-            common_checkLCDBoundaries(&endPoint);
+                common_checkLCDBoundaries(&mappedCenterStartErase);
+                common_checkLCDBoundaries(&mappedCenterEndErase);
 
-            // erase the previous line
-            LCD_DrawRectangle(startPoint.x,
-                              endPoint.x,
-                              startPoint.y,
-                              endPoint.y,
+                mapObjectToMe(&startPointLeft, &mappedCenterStartDraw);
+                mapObjectToMe(&endPointLeft, &mappedCenterEndDraw);
+
+                common_checkLCDBoundaries(&mappedCenterStartDraw);
+                common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+                my_prev->er_center1 = me->center;
+            }
+
+            // RIGHT BORDER UPDATE ----------------------------------
+            else if ( ii == 1 )
+            {
+                mapObjectToPrev(2, &startPointRight, &mappedCenterStartErase);
+                mapObjectToPrev(2, &endPointRight, &mappedCenterEndErase);
+
+                common_checkLCDBoundaries(&mappedCenterStartErase);
+                common_checkLCDBoundaries(&mappedCenterEndErase);
+
+                mapObjectToMe(&startPointRight, &mappedCenterStartDraw);
+                mapObjectToMe(&endPointRight, &mappedCenterEndDraw);
+
+                common_checkLCDBoundaries(&mappedCenterStartDraw);
+                common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+                my_prev->er_center2 = me->center;
+            }
+
+            // TOP BORDER UPDATE ------------------------------------
+            else if ( ii == 2 )
+            {
+                mapObjectToPrev(3, &startPointTop, &mappedCenterStartErase);
+                mapObjectToPrev(3, &endPointTop, &mappedCenterEndErase);
+
+                common_checkLCDBoundaries(&mappedCenterStartErase);
+                common_checkLCDBoundaries(&mappedCenterEndErase);
+
+                mapObjectToMe(&startPointTop, &mappedCenterStartDraw);
+                mapObjectToMe(&endPointTop, &mappedCenterEndDraw);
+
+                common_checkLCDBoundaries(&mappedCenterStartDraw);
+                common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+                my_prev->er_center3 = me->center;
+            }
+
+            // BOTTOM BORDER UPDATE ---------------------------------
+            else if ( ii == 3 )
+            {
+                mapObjectToPrev(4, &startPointBottom, &mappedCenterStartErase);
+                mapObjectToPrev(4, &endPointBottom, &mappedCenterEndErase);
+
+                common_checkLCDBoundaries(&mappedCenterStartErase);
+                common_checkLCDBoundaries(&mappedCenterEndErase);
+
+                mapObjectToMe(&startPointBottom, &mappedCenterStartDraw);
+                mapObjectToMe(&endPointBottom, &mappedCenterEndDraw);
+
+                common_checkLCDBoundaries(&mappedCenterStartDraw);
+                common_checkLCDBoundaries(&mappedCenterEndDraw);
+
+                my_prev->er_center4 = me->center;
+            }
+
+            // erase the previous left border line --------------------
+            LCD_DrawRectangle(mappedCenterStartErase.x,
+                              mappedCenterEndErase.x,
+                              mappedCenterStartErase.y,
+                              mappedCenterEndErase.y,
                               LCD_WHITE);
 
-            startPoint.x    = MAX_SCREEN_X / 2 - me->center.x;
-            startPoint.y    = MAX_SCREEN_Y / 2 - me->center.y;
-            endPoint.x      = MAX_SCREEN_X / 2 - me->center.x;
-            endPoint.y      = MAX_SCREEN_Y / 2 - (MAX_SCREEN_Y - me->center.y);
-
-            common_checkLCDBoundaries(&startPoint);
-            common_checkLCDBoundaries(&endPoint);
-
-            // write the new line
-            LCD_DrawRectangle(startPoint.x,
-                              endPoint.x,
-                              startPoint.y,
-                              endPoint.y,
+            // write the new left border line --------------------------
+            LCD_DrawRectangle(mappedCenterStartDraw.x,
+                              mappedCenterEndDraw.x,
+                              mappedCenterStartDraw.y,
+                              mappedCenterEndDraw.y,
                               LCD_BLACK);
         }
-
-        // RIGHT BORDER UPDATE ----------------------------------
-
-        // TOP BORDER UPDATE ------------------------------------
-
-        // BOTTOM BORDER UPDATE ---------------------------------
 
         // reassign the local player's center to be used in border updates next cycle
         my_prev->center = me->center;

@@ -15,7 +15,7 @@
 /*********************************************** Includes ********************************************************************/
 
 // TIMER MACROS ---------------------
-#define SN_UPDATE_PLAYER_POS    25
+#define SN_UPDATE_PLAYER_POS    10
 
 // GAME MACROS ----------------------
 #define SN_MAX_FOOD_ON_MAP      1
@@ -26,6 +26,19 @@
 #define SN_DIR_LEFT         1
 #define SN_DIR_UP           2
 #define SN_DIR_DOWN         3
+
+#define SN_PLAYER1_COLOR    LCD_GREEN
+#define SN_PLAYER2_COLOR    LCD_BLUE
+#define SN_PLAYER3_COLOR    LCD_RED
+
+#define SN_SNAKE_FRAME_0    60 // fully open
+#define SN_SNAKE_FRAME_1    61
+#define SN_SNAKE_FRAME_2    62
+#define SN_SNAKE_FRAME_3    63
+#define SN_SNAKE_FRAME_4    64 // fully closed
+#define SN_SNAKE_FRAME_5    65
+#define SN_SNAKE_FRAME_6    66
+#define SN_SNAKE_FRAME_7    67
 
 #define SN_FIFO_PL0         0
 #define SN_FIFO_PL1         1
@@ -63,6 +76,7 @@ typedef struct
 {
     point_t center;
     dir_t dir;
+    int8_t animation_count;
     bool alive;
     bool kill;
 } game3_Player_t;
@@ -70,6 +84,14 @@ typedef struct
 typedef struct
 {
     point_t center;
+    dir_t dir;
+
+    // points used for erasing the borders
+    // at different times
+    point_t er_center1;
+    point_t er_center2;
+    point_t er_center3;
+    point_t er_center4;
 } prev_player_t;
 
 typedef struct
@@ -92,6 +114,7 @@ typedef struct
     bool joined;            // handshaking data
     bool acknowledge;       // handshaking data
     point_t kill_food_center;
+    dir_t dir;
 } game3_ClientToHost_t;
 
 /*
@@ -111,9 +134,10 @@ void game3_addHostThreads();    // called by the menu to initialize this game
 void game3_addClientThreads();  // called by the menu to initialize this game
 
 void game3_refreshFood();
-bool withinPlayerRange(point_t * objectCenter, point_t * myCenter);
+void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t count, int16_t color);
+bool withinPlayerRange(point_t * objectCenter);
 void mapObjectToMe(point_t * objectCenter, point_t * mappedCenter);
-
+void mapObjectToPrev(int8_t num, point_t * objectCenter, point_t * mappedCenter);
 /*********************************************** Client Threads *********************************************************************/
 /*
  * Thread for client to join game
