@@ -24,6 +24,10 @@
 #define MIN_BALL_SPEED               1
 #define LIVES 5
 #define BALL_GEN_SLEEP      200 // 10 second increments increasing linearly
+#define PLAYER_OFFSET 5
+#define JOYSTICK_BIAS_CLIENT 200
+#define JOYSTICK_BIAS_HOST 200
+#define STATUS_STRING_OFFSET 20
 
 /* Background color - Black */
 #define BACK_COLOR                   LCD_BLACK
@@ -40,8 +44,10 @@ void game2_addClientThreads();  // called by the menu to initialize this game
 typedef struct
 {
     uint32_t IP_address;
-    int16_t displacement;
+    int8_t displacementX;
+    int8_t displacementY;
     uint8_t playerNumber;
+    uint8_t direction;
     bool ready;
     bool joined;
     bool acknowledge;
@@ -55,6 +61,7 @@ typedef struct
 {
     int16_t currentCenterX;
     int16_t currentCenterY;
+    uint8_t direction;
     uint16_t num_lives;
     uint16_t RunTime;
     uint16_t color;
@@ -189,6 +196,14 @@ void Game2_DrawObjects();
 void Game2_InitBoardState(uint8_t num_lives, uint16_t P1_runTime, uint16_t P2_runTime);
 
 void Game2_UpdatePlayerStatus();
+
+void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer);
+
+void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * currentBall, uint16_t outColor);
+
+void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color);
+
+
 
 /*********************************************** Aperiodic Threads *********************************************************************/
 void Game2_ButtonPress ( void );

@@ -22,15 +22,18 @@
 
 uint8_t ballCount = 0;
 Game2_PrevBall_t previousBalls[MAX_NUM_OF_BALLS];
+Game2_SpecificPlayerInfo_t client_player;
 Game2_GameState_t gamestate;
 Game2_GameState_t packet;
 uint32_t Start_time = 0;
+int16_t Game2_displacementX = 0;
+int16_t Game2_displacementY = 0;
 //add host threads
 void Game2_addHostThreads(){
     G8RTOS_AddThread( &Game2_GenerateBall, 20, 0xFFFFFFFF,          "GENERATE_BALL___" );
     G8RTOS_AddThread( &Game2_DrawObjects, 10, 0xFFFFFFFF,           "DRAW_OBJECTS____" );
     G8RTOS_AddThread( &Game2_UpdateBallColors, 20, 0xFFFFFFFF,           "DRAW_OBJECTS____" );
-    //G8RTOS_AddThread( &Game2_ReadJoystickHost, 20, 0xFFFFFFFF,      "READ_JOYSTICK___" );
+    G8RTOS_AddThread( &Game2_ReadJoystickHost, 20, 0xFFFFFFFF,      "READ_JOYSTICK___" );
     G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,              "MOVE_LEDS_______" );
     G8RTOS_AddThread( &Game2_IdleThread, 255, 0xFFFFFFFF,           "IDLE____________" );
 }
@@ -39,6 +42,30 @@ void Game2_CreateGame(){
     for(int i = 0; i<MAX_NUM_OF_PLAYERS; i++){
     gamestate.players[i].num_lives = LIVES;
     gamestate.players[i].RunTime = 0;
+    }
+    if(MAX_NUM_OF_PLAYERS == 1){
+        gamestate.players[0].currentCenterX = (ARENA_MAX_X - ARENA_MIN_X) >> 1;
+        gamestate.players[0].currentCenterY = (ARENA_MAX_Y - ARENA_MIN_Y) >> 1;
+        gamestate.players[0].color = Cyan;
+    }
+    if(MAX_NUM_OF_PLAYERS == 2){
+        gamestate.players[0].currentCenterX = (ARENA_MAX_X - ARENA_MIN_X) >> 2;
+        gamestate.players[0].currentCenterY = (ARENA_MAX_Y - ARENA_MIN_Y) >> 2;
+        gamestate.players[1].currentCenterX = ((ARENA_MAX_X - ARENA_MIN_X) >> 1) + gamestate.players[0].currentCenterX;
+        gamestate.players[1].currentCenterY = ((ARENA_MAX_Y - ARENA_MIN_Y) >> 1) + gamestate.players[0].currentCenterY;
+        gamestate.players[0].color = Cyan;
+        gamestate.players[1].color = Magenta;
+    }
+    if(MAX_NUM_OF_PLAYERS == 3){
+        gamestate.players[0].currentCenterX = (ARENA_MAX_X - ARENA_MIN_X) >> 3;
+        gamestate.players[0].currentCenterY = (ARENA_MAX_Y - ARENA_MIN_Y) >> 3;
+        gamestate.players[1].currentCenterX = (ARENA_MAX_X - ARENA_MIN_X) >> 1;
+        gamestate.players[1].currentCenterY = (ARENA_MAX_Y - ARENA_MIN_Y) >> 1;
+        gamestate.players[2].currentCenterX = ((ARENA_MAX_X - ARENA_MIN_X) >> 1) + gamestate.players[1].currentCenterX;
+        gamestate.players[2].currentCenterY = ((ARENA_MAX_Y - ARENA_MIN_Y) >> 1) + gamestate.players[1].currentCenterY;
+        gamestate.players[0].color = Cyan;
+        gamestate.players[1].color = Magenta;
+        gamestate.players[2].color = Blue2;
     }
 
     Game2_addHostThreads();
@@ -50,13 +77,13 @@ void Game2_CreateGame(){
 }
 
 void Game2_InitBoardState(uint8_t num_lives, uint16_t P1_runTime, uint16_t P2_runTime){
-    char status_p1_str[30];
-    char status_p2_str[30];
+    uint8_t status_p1_str[30];
+    uint8_t status_p2_str[30];
     // draw the current score of the players
     LCD_DrawRectangle(ARENA_MIN_X, ARENA_MAX_X, ARENA_MIN_Y - 2, ARENA_MIN_Y - 5, White);
     if(MAX_NUM_OF_PLAYERS == 1){
         sprintf(status_p1_str,"P1 Lives: %u Run Time: %u", num_lives, P1_runTime);
-        LCD_Text(0, 0, status_p1_str, LCD_WHITE);
+        LCD_Text(0, 0, status_p1_str, White);
     }
     else {
         //LCD_Text(8*14, 16*6, "B0 -> HOST", LCD_WHITE);
@@ -79,6 +106,156 @@ void Game2_GenerateBall()
             ballCount++;
         }
         sleep(ballCount * BALL_GEN_SLEEP);
+    }
+}
+
+/*
+ * Thread to read host's joystick
+ */
+void Game2_ReadJoystickHost(){
+    int16_t avgX = 0;
+    int16_t avgY = 0;
+    int16_t joystick_x = 0;
+    int16_t joystick_y = 0;
+
+    while(1)
+    {
+
+        GetJoystickCoordinates(&joystick_x, &joystick_y);
+        avgX = (avgX + joystick_x + JOYSTICK_BIAS_HOST) >> 1;
+        avgY = (avgY + joystick_y + JOYSTICK_BIAS_HOST) >> 1;
+
+        // The switch statement was causing about 500 ms of lag
+        Game2_displacementX = -(avgX >> 12);
+        Game2_displacementY = (avgY >> 12);
+
+        gamestate.players[0].currentCenterX += Game2_displacementX;
+        gamestate.players[0].currentCenterY += Game2_displacementY;
+
+        gamestate.players[1].currentCenterX += gamestate.player.displacementX;
+        gamestate.players[1].currentCenterY += gamestate.player.displacementY;
+
+        // PLAYER 1's X LIMITATIONS---------------------------------------------
+        // player center is too far to the left - limit it.
+        if ( gamestate.players[0].currentCenterX - PLAYER_OFFSET - 1 <= ARENA_MIN_X )
+        {
+            gamestate.players[0].currentCenterX = ARENA_MIN_X + PLAYER_OFFSET + 1;
+        }
+
+        // player center is too far to the right - limit it.
+        else if ( gamestate.players[0].currentCenterX + PLAYER_OFFSET + 1 > ARENA_MAX_X - 1 )
+        {
+            gamestate.players[0].currentCenterX = ARENA_MAX_X - PLAYER_OFFSET - 1;
+        }
+
+        // PLAYER 1's Y LIMITATIONS---------------------------------------------
+        // player center is too far to the left - limit it.
+        if ( gamestate.players[0].currentCenterY - PLAYER_OFFSET - 1 <= ARENA_MIN_Y )
+        {
+            gamestate.players[0].currentCenterY = ARENA_MIN_Y + PLAYER_OFFSET + 1;
+        }
+
+        // player center is too far to the right - limit it.
+        else if ( gamestate.players[0].currentCenterY + PLAYER_OFFSET + 1 > ARENA_MAX_Y - 1 )
+        {
+            gamestate.players[0].currentCenterY = ARENA_MAX_Y - PLAYER_OFFSET - 1;
+        }
+
+
+
+        // PLAYER 2's X LIMITATIONS---------------------------------------------
+        // player center is too far to the left - limit it.
+        if ( gamestate.players[1].currentCenterX - PLAYER_OFFSET - 1 <= MIN_SCREEN_X )
+        {
+            gamestate.players[1].currentCenterX = MIN_SCREEN_X + PLAYER_OFFSET + 1;
+        }
+
+        // player center is too far to the right - limit it.
+        else if ( gamestate.players[1].currentCenterX + PLAYER_OFFSET + 1 > MAX_SCREEN_X - 1 )
+        {
+            gamestate.players[1].currentCenterX = MAX_SCREEN_X - PLAYER_OFFSET - 1;
+        }
+
+        // PLAYER 2's Y LIMITATIONS---------------------------------------------
+        // player center is too far to the left - limit it.
+        if ( gamestate.players[1].currentCenterY - PLAYER_OFFSET - 1 <= MIN_SCREEN_Y )
+        {
+            gamestate.players[1].currentCenterY = MIN_SCREEN_Y + PLAYER_OFFSET + 1;
+        }
+
+        // player center is too far to the right - limit it.
+        else if ( gamestate.players[1].currentCenterY + PLAYER_OFFSET + 1 > MAX_SCREEN_Y - 1 )
+        {
+            gamestate.players[1].currentCenterY = MAX_SCREEN_Y - PLAYER_OFFSET - 1;
+        }
+
+
+
+        // player direction handling for the host
+        if ( abs(Game2_displacementX) >= abs(Game2_displacementY) )
+        {
+            if (Game2_displacementX > 0 )
+                gamestate.players[0].direction = 3;
+
+            else
+                gamestate.players[0].direction = 1;
+        }
+        else
+        {
+
+            if (Game2_displacementY > 0 )
+                gamestate.players[0].direction = 0;
+            else
+                gamestate.players[0].direction = 2;
+        }
+
+        sleep(10);
+    }
+}
+
+/*
+ * Thread to read client's joystick
+ */
+void Game2_ReadJoystickClient(){
+    int16_t avgX = 0;
+    int16_t avgY = 0;
+    int16_t joystick_x = 0;
+    int16_t joystick_y = 0;
+
+    while(1)
+    {
+        // moving average of the joystick inputs
+        GetJoystickCoordinates(&joystick_x, &joystick_y);
+        avgX = (avgX + joystick_x + 500) >> 1;
+        avgY = (avgY + joystick_y + 750) >> 1;
+
+        // The switch statement was causing about 500 ms of lag
+        Game2_displacementX = -(avgX >> 12);
+        Game2_displacementY = (avgY >> 12);
+
+        // assign the displacement from the client to send to the host here
+        client_player.displacementX = Game2_displacementX;
+        client_player.displacementY = Game2_displacementY;
+
+        // player direction handling
+        if ( abs(client_player.displacementX) >= abs(client_player.displacementY) )
+        {
+            if (client_player.displacementX > 0 )
+                client_player.direction = 3;
+
+            else
+                client_player.direction = 1;
+        }
+        else
+        {
+
+            if (client_player.displacementY > 0 )
+                client_player.direction = 0;
+            else
+                client_player.direction = 2;
+        }
+
+        sleep(10);
     }
 }
 
@@ -230,24 +407,26 @@ void Game2_DrawObjects()
 
     while(1)
     {
-        /*
+
         // Draw players --------------------
-        for (int i = 0; i < playerCount; i++)
+        for (int i = 0; i < MAX_NUM_OF_PLAYERS; i++)
         {
             // This player is on its first run. Draw
             // the entire paddle.
-            if ( prevPlayers[i].Center == -1 ) {
-                DrawPlayer( &gamestate.players[i] );
-                prevPlayers[i].Center = gamestate.players[i].currentCenter;
+            if ( prevPlayers[i].CenterX == -1 || prevPlayers[i].CenterY == -1  ) {
+                Game2_DrawPlayer( &gamestate.players[i], gamestate.players[i].color );
+                prevPlayers[i].CenterX = gamestate.players[i].currentCenterX;
+                prevPlayers[i].CenterY = gamestate.players[i].currentCenterY;
             }
+
             // if this player has already been drawn, only
             // update the parts that need to be redrawn.
             else
             {
-                UpdatePlayerOnScreen( &prevPlayers[i], &gamestate.players[i]);
+                Game2_UpdatePlayerOnScreen( &prevPlayers[i], &gamestate.players[i]);
             }
         }
-        */
+
         // Draw the ping pong balls ----------
         // STATE MACHINE..
         for(int i = 0; i < MAX_NUM_OF_BALLS; i++){
@@ -327,37 +506,96 @@ void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * cu
 }
 
 /*
+ * Draw players given center X center coordinate
+ */
+void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color)
+{
+    G8RTOS_WaitSemaphore(&LCDREADY);
+
+    LCD_DrawRectangle(player->currentCenterX - PLAYER_OFFSET, player->currentCenterX + PLAYER_OFFSET,
+                      player->currentCenterY - PLAYER_OFFSET, player->currentCenterY + PLAYER_OFFSET, color);
+
+    G8RTOS_SignalSemaphore(&LCDREADY);
+}
+
+/*
+ * Updates player based on current and new center
+ *
+ */
+void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer)
+{
+    // only update the player if it's center moved
+    if ( prevPlayerIn->CenterX != outPlayer->currentCenterX || prevPlayerIn->CenterY != outPlayer->currentCenterY )
+    {
+        // all smart common area saving was deleted here to generalize for the quiz.
+        G8RTOS_WaitSemaphore(&LCDREADY);
+
+        // // erase the UNCOMMON old player position first
+        LCD_DrawRectangle(prevPlayerIn->CenterX - PLAYER_OFFSET, prevPlayerIn->CenterX + PLAYER_OFFSET,
+                          prevPlayerIn->CenterY - PLAYER_OFFSET, prevPlayerIn->CenterY + PLAYER_OFFSET, LCD_BLACK);
+
+
+        // // draw the UNCOMMON updated player position
+        LCD_DrawRectangle(outPlayer->currentCenterX - PLAYER_OFFSET, outPlayer->currentCenterX + PLAYER_OFFSET,
+                          outPlayer->currentCenterY - PLAYER_OFFSET, outPlayer->currentCenterY + PLAYER_OFFSET, outPlayer->color);
+
+        // wrapping the data update doesn't allow the players to update twice
+        // before erasing the original
+        prevPlayerIn->CenterX = outPlayer->currentCenterX;
+        prevPlayerIn->CenterY = outPlayer->currentCenterY;
+
+        G8RTOS_SignalSemaphore(&LCDREADY);
+    }
+}
+
+/*
  * Function updates lives and run time
  */
 void Game2_UpdatePlayerStatus()
 {
-    char status_p1_str[30];
-    char status_p1_str_prev[30];
-    char status_p2_str[30];
-    char status_p2_str_prev[30];
+    uint8_t status_str[20];
+    uint8_t status_p1_str_prev[20];
+    uint8_t status_p2_str_prev[20];
+    uint8_t status_p3_str_prev[20];
     while(1){
-    for(int i = 0; i < MAX_NUM_OF_PLAYERS; i++){
-        if(gamestate.players[i].num_lives > 0){
-            gamestate.players[i].RunTime = SystemTime/1000;
-        }
-    }
-    G8RTOS_WaitSemaphore(&LCDREADY);
 
-    if(MAX_NUM_OF_PLAYERS == 1){
-        LCD_Text(0, 0, status_p1_str, Black);
-        sprintf(status_p1_str,"P1 L: %u RT: %u", gamestate.players[0].num_lives, gamestate.players[0].RunTime);
-        LCD_Text(0, 0, status_p1_str_prev, Black);
-        LCD_Text(0, 0, status_p1_str, White);
-        for(int i = 0; i < 30; i++){
-            status_p1_str_prev[i] = status_p1_str[i];
+        for(int i = 0; i < MAX_NUM_OF_PLAYERS; i++){
+            if(gamestate.players[i].num_lives > 0){
+                gamestate.players[i].RunTime = SystemTime/1000;
+            }
+            if(gamestate.players[i].num_lives > 0){
+                sprintf(status_str,"P%u L: %u RT: %u", i+1, gamestate.players[i].num_lives, gamestate.players[i].RunTime);
+            }
+            else {
+                sprintf(status_str,"P%u DEAD RT: %u", i+1, gamestate.players[i].RunTime);
+            }
+            uint16_t status_offset = i*STATUS_STRING_OFFSET*8;
+            G8RTOS_WaitSemaphore(&LCDREADY);
+            if(i == 0){
+                LCD_Text(0, status_offset, status_p1_str_prev, Black);
+            }
+            if(i == 1){
+                LCD_Text(0, status_offset, status_p2_str_prev, Black);
+            }
+            else{
+                LCD_Text(0, status_offset, status_p3_str_prev, Black);
+            }
+            LCD_Text(0, status_offset, status_str, gamestate.players[i].color);
+            G8RTOS_SignalSemaphore(&LCDREADY);
+            for(int j = 0; j < 20; j++){
+                if(i == 0){
+                    status_p1_str_prev[j] = status_str[j];
+                }
+                if(i == 1){
+                    status_p2_str_prev[j] = status_str[j];
+                }
+                else{
+                    status_p3_str_prev[j] = status_str[j];
+                }
+            }
         }
-    }
-    else {
-        //LCD_Text(8*14, 16*6, "B0 -> HOST", LCD_WHITE);
-    }
 
-    G8RTOS_SignalSemaphore(&LCDREADY);
-    sleep(1000);
+        sleep(1000);
     }
 }
 
