@@ -70,7 +70,7 @@ void menu_initMenu ( void )
     // write the game options in each quadrant
     LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*3, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "PAC-MAN", LCD_WHITE);
     LCD_Text( (QUAD_2_MAX_X + QUAD_2_MIN_X)/2 - 8*4, (QUAD_2_MAX_Y + QUAD_2_MIN_Y)/2 - 16, "DODGEBALL", LCD_WHITE);
-    LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SNAKE", LCD_WHITE);
+    LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SLITHER", LCD_WHITE);
     LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_WHITE);
 }
 
@@ -95,7 +95,7 @@ void menu_updateMenu ( void )
         else if ( packet_HostToClient.game_number == 2 )
         {
             LCD_DrawRectangle(QUAD_3_MIN_X + 3, QUAD_3_MAX_X - 3, QUAD_3_MIN_Y + 2, QUAD_3_MAX_Y - 4, LCD_WHITE);
-            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SNAKE", LCD_BLACK);
+            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SLITHER", LCD_BLACK);
         }
         else if ( packet_HostToClient.game_number == 3 )
         {
@@ -117,7 +117,7 @@ void menu_updateMenu ( void )
         else if ( packet_HostToClient.prev_game_number == 2 )
         {
             LCD_DrawRectangle(QUAD_3_MIN_X + 2, QUAD_3_MAX_X - 2, QUAD_3_MIN_Y + 1, QUAD_3_MAX_Y - 3, LCD_BLACK);
-            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SNAKE", LCD_WHITE);
+            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SLITHER", LCD_WHITE);
         }
         else if ( packet_HostToClient.prev_game_number == 3 )
         {
