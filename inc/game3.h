@@ -12,15 +12,19 @@
 #include "time.h"
 #include "math.h"
 #include "common_threads.h"
+#include "game3_snake_functions.h"
 /*********************************************** Includes ********************************************************************/
+
+// SEMAPHORES -----------------------
+extern semaphore_t CENTER_SEMAPHORE;
 
 // TIMER MACROS ---------------------
 #define SN_UPDATE_PLAYER_POS    10
 
 // GAME MACROS ----------------------
-#define SN_MAX_FOOD_ON_MAP      15
+#define SN_MAX_FOOD_ON_MAP      1
 #define SN_FOOD_SIZE            10
-#define SN_FOOD_SPAWN_RANGE     20
+#define SN_FOOD_SPAWN_RANGE     30
 
 #define SN_DIR_RIGHT        0
 #define SN_DIR_LEFT         1
@@ -92,6 +96,10 @@ typedef struct
     point_t er_center2;
     point_t er_center3;
     point_t er_center4;
+
+    // points used for erasing food at different
+    // times
+    point_t er_center5;
 } prev_player_t;
 
 typedef struct

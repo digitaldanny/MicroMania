@@ -25,6 +25,9 @@
 
 #include "game3.h"
 
+// semaphores ----------------
+semaphore_t CENTER_SEMAPHORE;
+
 // game global ---------------
 game3_HostToClient_t game3_HostToClient;
 game3_HostToClient_t game3_zipped;
@@ -43,6 +46,9 @@ point_t mappedCenterStartDraw;
 point_t mappedCenterEndDraw;
 point_t mappedCenterStartErase;
 point_t mappedCenterEndErase;
+
+point_t mappedCenter;
+point_t prevMappedCenter;
 
 // left border init ----------------------------------------
 point_t startPointLeft;             point_t endPointLeft;
@@ -68,7 +74,6 @@ int16_t avgY = 0;
 void game3_InitBoardState()
 {
     game3_Player_t * player;
-    prev_player_t * prevPlayer;
     game3_Food_t * food;
     point_t mappedCenter;
     uint16_t color;
@@ -83,7 +88,6 @@ void game3_InitBoardState()
     {
 
         player = &game3_HostToClient.players[i];
-        prevPlayer = &prevPlayers[i];
 
         if ( player->alive )
         {
@@ -221,8 +225,10 @@ void game3_refreshFood()
 // true if it is
 bool withinPlayerRange(point_t * objectCenter)
 {
-    if ( abs(objectCenter->x - me->center.x) <= SN_DRAW_RANGE_X
-           && abs(objectCenter->y - me->center.y) <= SN_DRAW_RANGE_Y )
+    if (        objectCenter->x <= SN_DRAW_RANGE_X
+           &&   objectCenter->x > MIN_SCREEN_X
+           &&   objectCenter->y <= SN_DRAW_RANGE_Y
+           &&   objectCenter->y > MIN_SCREEN_Y       )
     {
         return true;
     }
@@ -613,6 +619,8 @@ void game3_CreateGame()
     LCD_Clear(LCD_GREEN);
     LCD_Text(8*10, 16*10, "Connecting to SNAKE clients..", LCD_WHITE);
 
+    G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
+
     // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
     // left border init ----------------------------------------
     startPointLeft.x = SN_MAP_MIN_X;    startPointLeft.y = SN_MAP_MIN_Y;
@@ -908,7 +916,6 @@ void game3_DrawObjects()
     game3_Player_t * player;
     prev_player_t * prevPlayer;
     game3_Food_t * food;
-    point_t mappedCenter;
 
     for ( int i = 0; i < SN_MAX_FOOD_ON_MAP; i++ )
     {
@@ -981,14 +988,15 @@ void game3_DrawObjects()
             if ( food->alive && !food->kill )
             {
 
+                mapObjectToMe(&food->center, &mappedCenter);
+
                 // only draw the food if it is within range BEFORE being mapped to the
                 // player's center
-                if (withinPlayerRange(&food->center))
+                if (withinPlayerRange(&mappedCenter))
                 {
-                    mapObjectToMe(&food->center, &mappedCenter);
 
                     // erase the old position if this is not an initialization
-                    if ( prevFood[i].center.x < 0 )
+                    if ( (prevFood->center.x != -500) && (prevFood->center.y != -500) )
                     {
                         LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
                                           prevFood[i].center.x + SN_FOOD_SIZE / 2,
@@ -997,15 +1005,16 @@ void game3_DrawObjects()
                                           SN_BG_COLOR);
                     }
 
-                    // update the previous array
-                    prevFood[i].center = mappedCenter;
-
                     // draw the new position
                     LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
                                       mappedCenter.x + SN_FOOD_SIZE / 2,
                                       mappedCenter.y - SN_FOOD_SIZE / 2,
                                       mappedCenter.y + SN_FOOD_SIZE / 2,
                                       SN_FOOD_COLOR);
+
+                    // update the previous array so it cannot be forgotten for erase
+                    mapObjectToMe(&food->center, &prevMappedCenter);
+                    prevFood[i].center = prevMappedCenter;
                 }
 
                 // if the food is not currently within range of the player, check
@@ -1013,31 +1022,34 @@ void game3_DrawObjects()
                 // make sure to erase that square.
                 else if ( withinPlayerRange(&prevFood[i].center) )
                 {
-                    mapObjectToMe(&prevFood[i].center, &mappedCenter);
-
-                    LCD_DrawRectangle( mappedCenter.x - SN_FOOD_SIZE / 2,
-                                       mappedCenter.x + SN_FOOD_SIZE / 2,
-                                       mappedCenter.y - SN_FOOD_SIZE / 2,
-                                       mappedCenter.y + SN_FOOD_SIZE / 2,
+                    LCD_DrawRectangle( prevFood[i].center.x - SN_FOOD_SIZE / 2,
+                                       prevFood[i].center.x + SN_FOOD_SIZE / 2,
+                                       prevFood[i].center.y - SN_FOOD_SIZE / 2,
+                                       prevFood[i].center.y + SN_FOOD_SIZE / 2,
                                        SN_BG_COLOR);
+
+                    // define the previous center as invalid data so the
+                    // block is not constantly rewritten
+                    prevFood[i].center.x = -500;
+                    prevFood[i].center.y = -500;
                 }
             }
 
-            // ERASE THE FOOD
-            else if ( !food->alive && food->kill && withinPlayerRange(&food->center))
-            {
-                mapObjectToMe(&prevFood[i].center, &mappedCenter);
-
-                prevFood[i].center.x = -1;
-                prevFood[i].center.y = -1;
-                food->kill = false;
-
-                LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-                                  mappedCenter.x + SN_FOOD_SIZE / 2,
-                                  mappedCenter.y - SN_FOOD_SIZE / 2,
-                                  mappedCenter.y + SN_FOOD_SIZE / 2,
-                                  SN_BG_COLOR);
-            }
+            // THE FOOD WAS EATEN
+            // else if ( !food->alive && food->kill && withinPlayerRange(&food->center))
+            // {
+            //     mapObjectToMe(&prevFood[i].center, &mappedCenter);
+            //
+            //     prevFood[i].center.x = -1;
+            //     prevFood[i].center.y = -1;
+            //     food->kill = false;
+            //
+            //     LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
+            //                       mappedCenter.x + SN_FOOD_SIZE / 2,
+            //                       mappedCenter.y - SN_FOOD_SIZE / 2,
+            //                       mappedCenter.y + SN_FOOD_SIZE / 2,
+            //                       SN_BG_COLOR);
+            // }
 
             // // SPAWN NEW FOOD *****************************************8
             // else if ( !food->alive && !food->kill )
