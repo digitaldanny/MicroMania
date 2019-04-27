@@ -78,11 +78,6 @@ void game3_InitBoardState()
     point_t mappedCenter;
     uint16_t color;
 
-    // Initialize the FIFOs to be used as snake bodies
-    G8RTOS_InitFIFO(SN_FIFO_PL0);
-    G8RTOS_InitFIFO(SN_FIFO_PL1);
-    G8RTOS_InitFIFO(SN_FIFO_PL2);
-
     // Draw all the players on the map that are alive
     for (int i = 0; i < game3_numPlayers; i++)
     {
