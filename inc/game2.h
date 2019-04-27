@@ -12,6 +12,7 @@
 #include "math.h"
 #include "common_threads.h"
 /*********************************************** Includes ********************************************************************/
+#define DEFAULT_PRIORITY    15
 #define MAX_NUM_OF_BALLS 20
 #define MAX_NUM_OF_PLAYERS 1
 #define BALL_SIZE 2
@@ -196,7 +197,7 @@ void Game2_DrawObjects();
 /*
  * Initializes and prints initial game state
  */
-void Game2_InitBoardState(uint8_t num_lives, uint16_t P1_runTime, uint16_t P2_runTime);
+void Game2_InitBoardState();
 
 void Game2_UpdatePlayerStatus();
 
