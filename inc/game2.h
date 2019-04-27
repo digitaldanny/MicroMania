@@ -20,7 +20,7 @@
 #define ARENA_MIN_X 0
 #define ARENA_MIN_Y 20
 /* Maximum ball speed */
-#define MAX_BALL_SPEED               4
+#define MAX_BALL_SPEED               3
 #define MIN_BALL_SPEED               1
 #define LIVES 5
 #define BALL_GEN_SLEEP      200 // 10 second increments increasing linearly
@@ -30,7 +30,7 @@
 #define STATUS_STRING_OFFSET 20
 
 /* Background color - Black */
-#define BACK_COLOR                   LCD_BLACK
+#define BACK_COLOR                   White
 /*********************************************** Game Functions *********************************************************************/
 
 void game2_addHostThreads();    // called by the menu to initialize this game
@@ -74,6 +74,7 @@ typedef struct
     int16_t currentCenterX;
     int16_t currentCenterY;
     uint16_t color;
+    bool moving;
     bool alive;
     bool kill;
 } Game2_Ball_t;
@@ -203,7 +204,7 @@ void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_General
 
 void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * currentBall, uint16_t outColor);
 
-void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color);
+void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color, int ID);
 
 
 

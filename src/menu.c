@@ -28,15 +28,24 @@ uint8_t numPlayers;
 // B1 => CLIENT
 void menu_writeHostOrClient()
 {
+    G8RTOS_WaitSemaphore(&LCDREADY);
+
     LCD_Text(8*14, 16*6, "B0 -> HOST", LCD_WHITE);
     LCD_Text(8*14, 16*7, "B2 -> CLIENT", LCD_WHITE);
+
+    G8RTOS_SignalSemaphore(&LCDREADY);
+
 }
 
 // Erases the opening menu to allow the main
 // menu to open
 void menu_eraseHostOrClient()
 {
+    G8RTOS_WaitSemaphore(&LCDREADY);
+
     LCD_Clear(LCD_BLACK);
+
+    G8RTOS_SignalSemaphore(&LCDREADY);
 }
 
 void menu_addThreadsHost ( void )
@@ -58,6 +67,8 @@ void menu_addThreadsClient ( void )
 void menu_initMenu ( void )
 {
     // draw the menu quadrants
+    G8RTOS_WaitSemaphore(&LCDREADY);
+
     LCD_DrawRectangle(MAX_SCREEN_X/2 - 1, MAX_SCREEN_X/2, 0, MAX_SCREEN_Y - 1, LCD_WHITE);
     LCD_DrawRectangle(0, MAX_SCREEN_X, MAX_SCREEN_Y/2 - 1, MAX_SCREEN_Y/2, LCD_WHITE);
 
@@ -72,6 +83,8 @@ void menu_initMenu ( void )
     LCD_Text( (QUAD_2_MAX_X + QUAD_2_MIN_X)/2 - 8*4, (QUAD_2_MAX_Y + QUAD_2_MIN_Y)/2 - 16, "DODGEBALL", LCD_WHITE);
     LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SNAKE", LCD_WHITE);
     LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_WHITE);
+    G8RTOS_SignalSemaphore(&LCDREADY);
+
 }
 
 // redraws the menu with the correct tile hi-lited
@@ -80,6 +93,7 @@ void menu_updateMenu ( void )
     // only redraw the square if required
     if ( packet_HostToClient.game_number != packet_HostToClient.prev_game_number )
     {
+        G8RTOS_WaitSemaphore(&LCDREADY);
 
         // update the current game quadrant
         if ( packet_HostToClient.game_number == 0 )
@@ -125,6 +139,7 @@ void menu_updateMenu ( void )
             LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_WHITE);
 
         }
+        G8RTOS_SignalSemaphore(&LCDREADY);
 
         // update the previous game number so that the LCD only has to
         // update when a new game number is chosen.
