@@ -876,7 +876,42 @@ void Game2_EndOfGameHost(){
     gamestate.winner = true;    // this notifies client kill all threads
     //SendData((uint8_t*)&gamestate, gamestate.player.IP_address, sizeof(gamestate));
     // delay for 1 secondish
-    for (int i = 0; i < 100000; i++);
+    LCD_Clear(White);
+    char status_str[30];
+    if(MAX_NUM_OF_PLAYERS == 1){
+        G8RTOS_WaitSemaphore(&LCDREADY);
+        for(int i = 0; i < MARIO_ROWS; i++){
+            for(int j = 0; j < MARIO_COLUMNS; j++){
+                LCD_SetPoint(j, i, mario_red_map[i][j]);
+            }
+        }
+        sprintf(status_str,"You had a run time of: %u", gamestate.players[0].RunTime);
+        LCD_Text(15, 0, status_str, Black);
+        G8RTOS_SignalSemaphore(&LCDREADY);
+    }
+    else {
+        if(gamestate.players[0].RunTime > gamestate.players[1].RunTime){
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_COLUMNS; j++){
+                    LCD_SetPoint(j, i, mario_red_map[i][j]);
+                }
+            }
+            sprintf(status_str,"Wins with a run time of: %u", gamestate.players[0].RunTime);
+            LCD_Text(15, 0, status_str, Black);
+        }
+        else {
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_COLUMNS; j++){
+                    LCD_SetPoint(j, i, mario_green_map[i][j]);
+                }
+            }
+            sprintf(status_str,"Wins with a run time of: %u", gamestate.players[1].RunTime);
+            LCD_Text(15, 0, status_str, Black);
+        }
+    }
+
+
+    for (int i = 0; i < 500000; i++);
     menu_writeHostOrClient();
 
     // 6. Add GenerateBall, DrawObjects, ReadJoystickHost, SendDataToClient
@@ -910,9 +945,41 @@ void Game2_EndOfGameClient()
         }
 
         ballCount = 0;
-
+        LCD_Clear(White);
+        char status_str[30];
+        if(MAX_NUM_OF_PLAYERS == 1){
+            G8RTOS_WaitSemaphore(&LCDREADY);
+            for(int i = 0; i < MARIO_ROWS; i++){
+                for(int j = 0; j < MARIO_COLUMNS; j++){
+                    LCD_SetPoint(j, i, mario_red_map[i][j]);
+                }
+            }
+            sprintf(status_str,"You had a run time of: %u", gamestate.players[0].RunTime);
+            LCD_Text(15, 0, status_str, Black);
+            G8RTOS_SignalSemaphore(&LCDREADY);
+        }
+        else {
+            if(gamestate.players[0].RunTime > gamestate.players[1].RunTime){
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                        LCD_SetPoint(j, i, mario_red_map[i][j]);
+                    }
+                }
+                sprintf(status_str,"Wins with a run time of: %u", gamestate.players[0].RunTime);
+                LCD_Text(15, 0, status_str, Black);
+            }
+            else {
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                        LCD_SetPoint(j, i, mario_green_map[i][j]);
+                    }
+                }
+                sprintf(status_str,"Wins with a run time of: %u", gamestate.players[1].RunTime);
+                LCD_Text(15, 0, status_str, Black);
+            }
+        }
         // delay for 1 secondish
-        for (int i = 0; i < 100000; i++);
+        for (int i = 0; i < 500000; i++);
 
         menu_writeHostOrClient();
         G8RTOS_KillSelf();
