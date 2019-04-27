@@ -36,7 +36,7 @@ extern uint32_t SystemCoreClock;
  * Pointer to the currently running Thread Control Block
  */
 #ifdef OPT
-tcb_t * head;
+static tcb_t * head;
 #endif
 
 extern tcb_t * CurrentlyRunningThread;
