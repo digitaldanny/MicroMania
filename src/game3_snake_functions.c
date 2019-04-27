@@ -33,13 +33,18 @@
 #include "game3_snake_functions.h"
 
 // globals ----------------------------------
-snake_t * head;
-snake_t * tail;
-snake_t * body;
+static snake_t * head;
+static snake_t * tail;
+static snake_t * body;
+static int8_t * size;
 
 snake_t snake_pl0[SN_SNAKE_MAX_LENGTH];
 snake_t snake_pl1[SN_SNAKE_MAX_LENGTH];
 snake_t snake_pl2[SN_SNAKE_MAX_LENGTH];
+
+int8_t snake_pl0_size;
+int8_t snake_pl1_size;
+int8_t snake_pl2_size;
 
 snake_t * snake_pl0_head;
 snake_t * snake_pl0_tail;
@@ -59,16 +64,19 @@ void game3_assignPointers(int8_t player_num)
     {
         head = snake_pl0_head;
         tail = snake_pl0_tail;
+        size = &snake_pl0_size;
     }
     else if ( player_num == 1 )
     {
         head = snake_pl1_head;
         tail = snake_pl1_tail;
+        size = &snake_pl1_size;
     }
     else if ( player_num == 2 )
     {
         head = snake_pl2_head;
         tail = snake_pl2_tail;
+        size = &snake_pl2_size;
     }
 }
 
@@ -86,10 +94,11 @@ void game3_initSnake(point_t * head_and_tail, int8_t player_num)
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
             body = &snake_pl0[i];
+            snake_pl0_size = 1;
 
             body->alive = false;
-            body->center.x = 0;
-            body->center.y = 0;
+            body->center.x = -500;
+            body->center.y = -500;
             body->next = NULL;
             body->next = NULL;
         }
@@ -102,10 +111,11 @@ void game3_initSnake(point_t * head_and_tail, int8_t player_num)
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
             body = &snake_pl1[i];
+            snake_pl1_size = 1;
 
             body->alive = false;
-            body->center.x = 0;
-            body->center.y = 0;
+            body->center.x = -500;
+            body->center.y = -500;
             body->next = NULL;
             body->next = NULL;
         }
@@ -118,10 +128,11 @@ void game3_initSnake(point_t * head_and_tail, int8_t player_num)
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
             body = &snake_pl2[i];
+            snake_pl2_size = 1;
 
             body->alive = false;
-            body->center.x = 0;
-            body->center.y = 0;
+            body->center.x = -500;
+            body->center.y = -500;
             body->next = NULL;
             body->next = NULL;
         }
@@ -166,6 +177,7 @@ bool game3_addSnakeHead(point_t * new_head, int8_t player_num)
         // initialize the new head
         if ( body->alive == false )
         {
+            (*size)++;
             body->alive = true;
             body->center = *new_head;
             body->next = head;
@@ -206,37 +218,41 @@ point_t game3_rmSnakeTail(int8_t player_num)
 {
     point_t tail_center;
 
-    // determine which player's snake
-    // array is being pointed to
-    if ( player_num == 0 )
-        tail = snake_pl0_tail;
-    else if ( player_num == 1 )
-        tail = snake_pl1_tail;
-    else
-        tail = snake_pl2_tail;
+    if ( (*size) > 0 )
+    {
+        // determine which player's snake
+        // array is being pointed to
+        if ( player_num == 0 )
+            tail = snake_pl0_tail;
+        else if ( player_num == 1 )
+            tail = snake_pl1_tail;
+        else
+            tail = snake_pl2_tail;
 
-    // assign the returned tail center
-    // value to be used in the main program
-    tail_center = tail->center;
+        // assign the returned tail center
+        // value to be used in the main program
+        tail_center = tail->center;
 
-    // reassign the portions of the linked
-    // list that are not being removed
-    tail->prev->next = head;
-    head->prev = tail->prev;
+        // reassign the portions of the linked
+        // list that are not being removed
+        tail->prev->next = head;
+        head->prev = tail->prev;
 
-    // get rid of the previous tail
-    // by reassigning it
-    if ( player_num == 0 )
-        snake_pl0_tail = tail->prev;
-    else if ( player_num == 1 )
-        snake_pl1_tail = tail->prev;
-    else
-        snake_pl2_tail = tail->prev;
+        // get rid of the previous tail
+        // by reassigning it
+        if ( player_num == 0 )
+            snake_pl0_tail = tail->prev;
+        else if ( player_num == 1 )
+            snake_pl1_tail = tail->prev;
+        else
+            snake_pl2_tail = tail->prev;
 
-    // set the tail as dead so that
-    // it can be used later when the
-    // snake grows
-    tail->alive = false;
+        // set the tail as dead so that
+        // it can be used later when the
+        // snake grows
+        tail->alive = false;
+        (*size)--;
+    }
 
     return tail_center;
 }
@@ -274,4 +290,27 @@ point_t game3_snakeAt(int8_t index, int8_t player_num)
     }
 
     return index_point;
+}
+
+// This function returns "true" if the max size of
+// the snake is reached.
+bool game3_limitReached(int8_t player_num)
+{
+    // point to the correct snake information
+    game3_assignPointers(player_num);
+
+    if ( (*size) >= SN_SNAKE_MAX_LENGTH )
+        return true;
+
+    else
+        return false;
+}
+
+// This function returns the current length of the snake
+int8_t game3_snakeLength(int8_t player_num)
+{
+    // point to the correct snake information
+    game3_assignPointers(player_num);
+
+    return (*size);
 }

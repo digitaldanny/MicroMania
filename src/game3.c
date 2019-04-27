@@ -47,8 +47,11 @@ point_t mappedCenterEndDraw;
 point_t mappedCenterStartErase;
 point_t mappedCenterEndErase;
 
+// variables used to map each part of the map to the current
+// center of the snake head.
 point_t mappedCenter;
 point_t prevMappedCenter;
+point_t mappedBodyCenter;
 
 // left border init ----------------------------------------
 point_t startPointLeft;             point_t endPointLeft;
@@ -183,7 +186,7 @@ void game3_addHostThreads()
 
     G8RTOS_AddThread(&game3_UpdateGamestateHost, 20, 0xFFFFFFFF, "GAMESTATE_UPDATE");
     G8RTOS_AddThread(&game3_ReadJoystickHost, 25, 0xFFFFFFFF, "JOYSTICK_HOST");
-    G8RTOS_AddThread(&game3_DrawObjects, 20, 0xFFFFFFFF, "DRAW_OBJECTS");
+    G8RTOS_AddThread(&game3_DrawObjects, 22, 0xFFFFFFFF, "DRAW_OBJECTS");
     G8RTOS_AddThread(&common_IdleThread, 255, 0xFFFFFFFF, "IDLE");
 }
 
@@ -615,6 +618,8 @@ void game3_CreateGame()
     LCD_Text(8*10, 16*10, "Connecting to SNAKE clients..", LCD_WHITE);
 
     G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
+    G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
+    G8RTOS_InitSemaphore(&LCDREADY, 1);
 
     // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
     // left border init ----------------------------------------
@@ -656,6 +661,9 @@ void game3_CreateGame()
         prevPlayers[i].center.x = game3_HostToClient.players[i].center.x - 1;
         prevPlayers[i].center.y = game3_HostToClient.players[i].center.y - 1;
         prevPlayers[i].dir = DOWN;
+
+        // initialize the snakes for each function
+        game3_initSnake(&game3_HostToClient.players[i].center, i);
     }
 
     my_prev = &prevPlayers[0];
@@ -785,6 +793,8 @@ void game3_UpdateGamestateHost()
         // INCREMENT COUNTERS HERE TO UPDATE GAMESTATE -------
         updateJoystickCount++;
 
+        G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
+
         // HOST ADJUSTMENTS ----------------------------------
         if ( updateJoystickCount >= SN_UPDATE_PLAYER_POS )
         {
@@ -830,8 +840,40 @@ void game3_UpdateGamestateHost()
                 me->center.y = SN_SNAKE_SIZE / 2;
             }
 
+            // DEBUGGGGGGGGGGGG ****************************************************
+            game3_HostToClient.players[0].size_up = true;
+
+            // add the new center value to the player snake and remove
+            // the old tail to be drawn by the draw objects function if
+            // the snake is not supposed to size up OR if the max snake
+            // length has already been reached.
+            if ( !game3_HostToClient.players[0].size_up || game3_limitReached(0) )
+            {
+                G8RTOS_WaitSemaphore(&LCDREADY);
+                point_t eraseCenter;
+
+                point_t erasePoint = game3_rmSnakeTail(0);
+                mapObjectToPrev(1, &erasePoint, &eraseCenter);
+
+                // Erase the previous tail here if the tail is deleted..
+                if (withinPlayerRange(&eraseCenter))
+                {
+                    LCD_DrawRectangle( eraseCenter.x - SN_SNAKE_SIZE / 2,
+                                       eraseCenter.x + SN_SNAKE_SIZE / 2,
+                                       eraseCenter.y - SN_SNAKE_SIZE / 2,
+                                       eraseCenter.y + SN_SNAKE_SIZE / 2,
+                                       SN_BG_COLOR);
+                }
+
+                G8RTOS_SignalSemaphore(&LCDREADY);
+            }
+
+            game3_addSnakeHead(&me->center, 0);
+
             updateJoystickCount = 0;
         }
+
+        G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
 
         // CLIENT ADJUSTMENTS --------------------------------
 
@@ -929,6 +971,8 @@ void game3_DrawObjects()
          */
         for (int i = 0; i < MAX_NUM_PLAYERS; i++)
         {
+            G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
+
             player = &game3_HostToClient.players[i];
             prevPlayer = &prevPlayers[i];
 
@@ -945,14 +989,58 @@ void game3_DrawObjects()
                     else                color = SN_PLAYER3_COLOR;
 
                     // play the next frame of the snake head animation
+                    point_t snakeBodyCenter;
                     if ( mappedCenter.x > 0 && mappedCenter.y > 0 )
                     {
+                        G8RTOS_WaitSemaphore(&LCDREADY);
                         game3_drawSnakeHead(prevPlayer->dir,
                                             player->dir,
                                             mappedCenter.x,
                                             mappedCenter.y,
                                             player->animation_count,
                                             color);
+                        G8RTOS_SignalSemaphore(&LCDREADY);
+
+                        // update each part of the snake's body relative
+                        // to the current snake head
+                        for (int j = 0; j < game3_snakeLength(i); j++)
+                        {
+                            // erase the previous snake body information
+                            // if the player has moved
+                            snakeBodyCenter = game3_snakeAt(j, i);
+                            mapObjectToPrev(0, &snakeBodyCenter, &mappedBodyCenter);
+
+                            // Only erase the snake body if the center data is
+                            // valid information ( NOT -500, -500 )
+                            if ( withinPlayerRange(&mappedBodyCenter)
+                                    && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y)
+                                    && snakeBodyCenter.x != -500 && snakeBodyCenter.y != -500)
+                            {
+                                G8RTOS_WaitSemaphore(&LCDREADY);
+                                LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
+                                                  mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
+                                                  mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
+                                                  mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
+                                                  SN_BG_COLOR);
+                                G8RTOS_SignalSemaphore(&LCDREADY);
+                            }
+
+                            // draw the new snake body information
+                            snakeBodyCenter = game3_snakeAt(j, i);
+                            mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
+
+                            if ( withinPlayerRange(&mappedBodyCenter)
+                                    && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y) )
+                            {
+                                G8RTOS_WaitSemaphore(&LCDREADY);
+                                LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
+                                                  mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
+                                                  mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
+                                                  mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
+                                                  color);
+                                G8RTOS_SignalSemaphore(&LCDREADY);
+                            }
+                        }
                     }
                 }
 
@@ -962,9 +1050,14 @@ void game3_DrawObjects()
                 player->animation_count++;
                 if ( player->animation_count >= SN_SNAKE_FRAME_7 )
                     player->animation_count = 0;
+
             }
 
+            prevPlayers[i].center = player->center; // DEBUG *********
             prevPlayers[i].dir = player->dir;
+
+            G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
+            sleep(5);
         }
 
         /*
@@ -993,19 +1086,23 @@ void game3_DrawObjects()
                     // erase the old position if this is not an initialization
                     if ( (prevFood->center.x != -500) && (prevFood->center.y != -500) )
                     {
+                        G8RTOS_WaitSemaphore(&LCDREADY);
                         LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
                                           prevFood[i].center.x + SN_FOOD_SIZE / 2,
                                           prevFood[i].center.y - SN_FOOD_SIZE / 2,
                                           prevFood[i].center.y + SN_FOOD_SIZE / 2,
                                           SN_BG_COLOR);
+                        G8RTOS_SignalSemaphore(&LCDREADY);
                     }
 
                     // draw the new position
+                    G8RTOS_WaitSemaphore(&LCDREADY);
                     LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
                                       mappedCenter.x + SN_FOOD_SIZE / 2,
                                       mappedCenter.y - SN_FOOD_SIZE / 2,
                                       mappedCenter.y + SN_FOOD_SIZE / 2,
                                       SN_FOOD_COLOR);
+                    G8RTOS_SignalSemaphore(&LCDREADY);
 
                     // update the previous array so it cannot be forgotten for erase
                     mapObjectToMe(&food->center, &prevMappedCenter);
@@ -1017,11 +1114,13 @@ void game3_DrawObjects()
                 // make sure to erase that square.
                 else if ( withinPlayerRange(&prevFood[i].center) )
                 {
+                    G8RTOS_WaitSemaphore(&LCDREADY);
                     LCD_DrawRectangle( prevFood[i].center.x - SN_FOOD_SIZE / 2,
                                        prevFood[i].center.x + SN_FOOD_SIZE / 2,
                                        prevFood[i].center.y - SN_FOOD_SIZE / 2,
                                        prevFood[i].center.y + SN_FOOD_SIZE / 2,
                                        SN_BG_COLOR);
+                    G8RTOS_SignalSemaphore(&LCDREADY);
 
                     // define the previous center as invalid data so the
                     // block is not constantly rewritten
@@ -1065,7 +1164,7 @@ void game3_DrawObjects()
         game3_updateBorders();
 
         // reassign the local player's center to be used in border updates next cycle
-        my_prev->center = me->center;
+        // my_prev->center = me->center;
 
         sleep(20);
     }

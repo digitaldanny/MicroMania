@@ -83,6 +83,7 @@ typedef struct
     int8_t animation_count;
     bool alive;
     bool kill;
+    bool size_up;
 } game3_Player_t;
 
 typedef struct

@@ -10,8 +10,7 @@
 
 #include "common_threads.h"
 
-#define SN_SNAKE_MAX_LENGTH     10
-#define HEAD                    0
+#define SN_SNAKE_MAX_LENGTH     50
 
 // This represents one block of
 // the snake. Head and tail are of
@@ -49,5 +48,12 @@ point_t game3_rmSnakeTail(int8_t player_num);
 // list until the correct snake structure is found
 // and return the center value.
 point_t game3_snakeAt(int8_t index, int8_t player_num);
+
+// This function returns "true" if the max size of
+// the snake is reached.
+bool game3_limitReached(int8_t player_num);
+
+// This function returns the current length of the snake
+int8_t game3_snakeLength(int8_t player_num);
 
 #endif /* INC_GAME3_SNAKE_FUNCTIONS_H_ */
