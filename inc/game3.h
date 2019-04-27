@@ -35,14 +35,14 @@ extern semaphore_t CENTER_SEMAPHORE;
 #define SN_PLAYER2_COLOR    LCD_BLUE
 #define SN_PLAYER3_COLOR    LCD_RED
 
-#define SN_SNAKE_FRAME_0    60 // fully open
-#define SN_SNAKE_FRAME_1    61
-#define SN_SNAKE_FRAME_2    62
-#define SN_SNAKE_FRAME_3    63
-#define SN_SNAKE_FRAME_4    64 // fully closed
-#define SN_SNAKE_FRAME_5    65
-#define SN_SNAKE_FRAME_6    66
-#define SN_SNAKE_FRAME_7    67
+#define SN_SNAKE_FRAME_0    20 // fully open
+#define SN_SNAKE_FRAME_1    21
+#define SN_SNAKE_FRAME_2    22
+#define SN_SNAKE_FRAME_3    23
+#define SN_SNAKE_FRAME_4    24 // fully closed
+#define SN_SNAKE_FRAME_5    25
+#define SN_SNAKE_FRAME_6    26
+#define SN_SNAKE_FRAME_7    27
 
 #define SN_FIFO_PL0         0
 #define SN_FIFO_PL1         1

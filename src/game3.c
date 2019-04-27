@@ -1003,6 +1003,7 @@ void game3_DrawObjects()
 
                         // update each part of the snake's body relative
                         // to the current snake head
+                        bool save_cpu = true;
                         for (int j = 0; j < game3_snakeLength(i); j++)
                         {
                             // erase the previous snake body information
@@ -1010,28 +1011,83 @@ void game3_DrawObjects()
                             snakeBodyCenter = game3_snakeAt(j, i);
                             mapObjectToPrev(0, &snakeBodyCenter, &mappedBodyCenter);
 
+                            // // If the player is pointing the same direction that
+                            // // it was previously, determine if the squares need to be
+                            // // redrawn. Else redraw ALL blocks.
+                            // // NOTE: SAVE_CPU variable is used to stop trying ot save cpu
+                            // // time when the analysis has found that the snake made its first
+                            // // turn.
+                            // if ( me->dir == my_prev->dir && save_cpu == true )
+                            // {
+                            //     // if the directions were UP or DOWN, do NOT redraw
+                            //     // the block if the x coordinates matched.
+                            //     if ( me->dir == UP || me->dir == DOWN )
+                            //     {
+                            //         if ( snakeBodyCenter.x == me->center.x )
+                            //             continue;
+                            //         else
+                            //             save_cpu = false;
+                            //     }
+                            //
+                            //     // if the directions were LEFT or RIGHT, do NOT redraw
+                            //     // the block if the y coordinates matched.
+                            //     else if ( me->dir == LEFT || me->dir == RIGHT )
+                            //     {
+                            //         if ( snakeBodyCenter.y == me->center.y )
+                            //             continue;
+                            //         else
+                            //             save_cpu = false;
+                            //     }
+                            // }
+
                             // Only erase the snake body if the center data is
                             // valid information ( NOT -500, -500 )
                             if ( withinPlayerRange(&mappedBodyCenter)
                                     && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y)
                                     && snakeBodyCenter.x != -500 && snakeBodyCenter.y != -500)
                             {
+                                int16_t delete_color = SN_BG_COLOR;
+
+                                // if the player is up against the border, the erase function
+                                // can delete portions of the off-map because it writes in
+                                // white instead of black.
+
+                                // CHECKING LEFT BORDER ----------------------
+                                if ( snakeBodyCenter.x <= SN_MAP_MIN_X + SN_SNAKE_SIZE / 2
+                                        && player->dir == LEFT )
+                                    delete_color = LCD_BLACK;
+
+                                // CHECKING RIGHT BORDER ---------------------
+                                else if ( snakeBodyCenter.x >= SN_MAP_MAX_X - 1 - SN_SNAKE_SIZE / 2
+                                        && player->dir == RIGHT)
+                                    delete_color = LCD_BLACK;
+
+                                // CHECKING TOP BORDER -----------------------
+                                else if ( snakeBodyCenter.y <= SN_MAP_MIN_Y + SN_SNAKE_SIZE / 2
+                                        && player->dir == UP)
+                                    delete_color = LCD_BLACK;
+
+                                // CHECKING BOTTOM BORDER --------------------
+                                else if ( snakeBodyCenter.y >= SN_MAP_MAX_Y - 1 - SN_SNAKE_SIZE / 2
+                                        && player->dir == DOWN)
+                                    delete_color = LCD_BLACK;
+
                                 G8RTOS_WaitSemaphore(&LCDREADY);
                                 LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
                                                   mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
                                                   mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
                                                   mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
-                                                  SN_BG_COLOR);
+                                                  delete_color);
                                 G8RTOS_SignalSemaphore(&LCDREADY);
                             }
 
-                            // draw the new snake body information
-                            snakeBodyCenter = game3_snakeAt(j, i);
+                            // draw the new snake body information if the player
                             mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
 
                             if ( withinPlayerRange(&mappedBodyCenter)
                                     && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y) )
                             {
+
                                 G8RTOS_WaitSemaphore(&LCDREADY);
                                 LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
                                                   mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
