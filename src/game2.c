@@ -114,6 +114,7 @@ void Game2_addHostThreads(){
     G8RTOS_AddThread( &Game2_ReadJoystickHost, 20, 0xFFFFFFFF,      "READ_JOYSTICK___" );
     G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,    "UpdatePlayerStatus" );
     G8RTOS_AddThread( &Game2_IdleThread, 255, 0xFFFFFFFF,           "IDLE____________" );
+    G8RTOS_AddThread(&Game2_MoveBall, 10, 0xFFFFFFFF, "MOVE_BALL_______");
     #ifndef SINGLE
         G8RTOS_AddThread( &Game2_ReceiveDataFromClient, DEFAULT_PRIORITY, 0xFFFFFFFF, "RECEIVE_DATA____" );
         G8RTOS_AddThread( &Game2_SendDataToClient, DEFAULT_PRIORITY, 0xFFFFFFFF,      "SEND_DATA_______" );
@@ -205,7 +206,31 @@ void Game2_GenerateBall()
         // the max number of balls have not been generated.
         if ( ballCount < MAX_NUM_OF_BALLS )
         {
-            G8RTOS_AddThread(&Game2_MoveBall, 10, 0xFFFFFFFF, "MOVE_BALL_______");
+            //G8RTOS_AddThread(&Game2_MoveBall, 10, 0xFFFFFFFF, "MOVE_BALL_______");
+            //Game2_Ball_t * ball;
+            //Game2_PrevBall_t * previousBall;
+
+            for (int i = 0; i < MAX_NUM_OF_BALLS; i++)
+            {
+                if ( gamestate.balls[i].alive == 0 && gamestate.balls[i].kill == 0)
+                {
+                    //previousBall->CenterX = 0;
+                    //previousBall->CenterY = 120;
+                    gamestate.balls[i].alive = 1;
+                    gamestate.balls[i].kill = 0;
+                    gamestate.balls[i].color = BACK_COLOR;
+                    gamestate.balls[i].currentCenterX = BALL_SIZE * (rand() % ((ARENA_MAX_X - ARENA_MIN_X - BALL_SIZE)/BALL_SIZE)) + ARENA_MIN_X + 1;
+                    gamestate.balls[i].currentCenterY = BALL_SIZE * (rand() % (((ARENA_MAX_Y - 80 - ARENA_MIN_Y)/BALL_SIZE)) + 10);
+                    previousBalls[i].CenterX = gamestate.balls[i].currentCenterX;
+                    previousBalls[i].CenterY = gamestate.balls[i].currentCenterY;
+                    gamestate.balls[i].xvel = rand() % MAX_BALL_SPEED + 1;
+                    gamestate.balls[i].yvel = rand() % MAX_BALL_SPEED + 1;
+                    if(gamestate.balls[i].currentCenterY > 120){
+                        gamestate.balls[i].yvel = -gamestate.balls[i].yvel;
+                    }
+                    break;
+                }
+            }
             ballCount++;
         }
         sleep(ballCount * BALL_GEN_SLEEP);
@@ -227,7 +252,7 @@ void Game2_ReadJoystickHost(){
         GetJoystickCoordinates(&joystick_x, &joystick_y);
         avgX = (avgX + joystick_x + JOYSTICK_BIAS_HOST) >> 1;
         avgY = (avgY + joystick_y + JOYSTICK_BIAS_HOST) >> 1;
-        if(avgX < 750 && avgX > -750){
+        if(avgX < 750 && avgX > -1000){
             avgX = 0;
         }
         if(avgY < 750 && avgY > -1000){
@@ -378,7 +403,7 @@ void Game2_MoveBall()
 {
     // initialize the ball properties for the ball
     // that will be used in this thread.
-
+    /*
     Game2_Ball_t * ball;
     Game2_PrevBall_t * previousBall;
 
@@ -407,116 +432,111 @@ void Game2_MoveBall()
     if(ball->currentCenterY > 120){
         yvel = -yvel;
     }
-
+    */
     while(1){
-        // test if hitting the right or left side wall
-        if((xvel > 0 && ball->currentCenterX + xvel + GOOMBA_SIZE + 1 >= ARENA_MAX_X) ||
-           (xvel < 0 && ball->currentCenterX + xvel - 1 - GOOMBA_SIZE<= ARENA_MIN_X)){
-            xvel = -xvel;
-        }
-
-        // test if hitting the top or bottom paddle
-        if(((yvel > 0 && ball->currentCenterY + yvel + GOOMBA_SIZE + 1 >= ARENA_MAX_Y)) ||
-           ((yvel < 0 && ball->currentCenterY + yvel - 1 <= ARENA_MIN_Y))){
-
-            // reverse the y direction
-            yvel = -yvel;
-
-            // ball directions for top
-            if(yvel > 0){
-                if(ball->currentCenterX <= ARENA_MAX_X >>1){
-                    xvel -= 1;
-                    if(xvel > 0){
-                        yvel += 1;
-                    }
-                    else{
-                        yvel -= 1;
-                    }
-                }
-                else if(ball->currentCenterX > ARENA_MAX_X>>1){
-                    xvel += 1;
-                    if(xvel < 0){
-                        yvel += 1;
-                    }
-                    else{
-                        yvel -= 1;
-                    }
-                }
-                if(yvel == 0){  yvel = 1;}
+        for(int j = 0; j < MAX_NUM_OF_BALLS; j++){
+            // test if hitting the right or left side wall
+            if((gamestate.balls[j].xvel > 0 && gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel + GOOMBA_SIZE + 1 >= ARENA_MAX_X) ||
+               (gamestate.balls[j].xvel < 0 && gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel - 1 - GOOMBA_SIZE<= ARENA_MIN_X)){
+                gamestate.balls[j].xvel = -gamestate.balls[j].xvel;
             }
 
-            // ball directions for bottom
-            else{
-                if(ball->currentCenterX <= ARENA_MAX_X>>1){
-                    xvel += 1;
-                    if(xvel > 0){
-                        yvel += 1;
+            // test if hitting the top or bottom paddle
+            if(((gamestate.balls[j].yvel > 0 && gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel + GOOMBA_SIZE + 1 >= ARENA_MAX_Y)) ||
+               ((gamestate.balls[j].yvel < 0 && gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel - 1 <= ARENA_MIN_Y))){
+
+                // reverse the y direction
+                gamestate.balls[j].yvel = -gamestate.balls[j].yvel;
+
+                // ball directions for top
+                if(gamestate.balls[j].yvel > 0){
+                    if(gamestate.balls[j].currentCenterX <= ARENA_MAX_X >>1){
+                        gamestate.balls[j].xvel -= 1;
+                        if(gamestate.balls[j].xvel > 0){
+                            gamestate.balls[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.balls[j].yvel -= 1;
+                        }
                     }
-                    else{
-                        yvel -= 1;
+                    else if(gamestate.balls[j].currentCenterX > ARENA_MAX_X>>1){
+                        gamestate.balls[j].xvel += 1;
+                        if(gamestate.balls[j].xvel < 0){
+                            gamestate.balls[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.balls[j].yvel -= 1;
+                        }
                     }
+                    if(gamestate.balls[j].yvel == 0){  gamestate.balls[j].yvel = 1;}
                 }
-                else if(ball->currentCenterX > ARENA_MAX_X>>1){
-                    xvel -= 1;
-                    if(xvel < 0){
-                        yvel += 1;
+
+                // ball directions for bottom
+                else{
+                    if(gamestate.balls[j].currentCenterX <= ARENA_MAX_X>>1){
+                        gamestate.balls[j].xvel += 1;
+                        if(gamestate.balls[j].xvel > 0){
+                            gamestate.balls[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.balls[j].yvel -= 1;
+                        }
                     }
-                    else{
-                        yvel -= 1;
+                    else if(gamestate.balls[j].currentCenterX > ARENA_MAX_X>>1){
+                        gamestate.balls[j].xvel -= 1;
+                        if(gamestate.balls[j].xvel < 0){
+                            gamestate.balls[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.balls[j].yvel -= 1;
+                        }
                     }
+                    if(gamestate.balls[j].yvel == 0){  gamestate.balls[j].yvel = -1;}
                 }
-                if(yvel == 0){  yvel = -1;}
             }
-        }
 
+            for(int i = 0; i < MAX_NUM_OF_PLAYERS; i++){
+                if(((gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel + GOOMBA_SIZE - 2 >= gamestate.players[i].currentCenterX) &&
+                        (gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel + GOOMBA_SIZE - 2  <= gamestate.players[i].currentCenterX + MARIO_COLUMNS)) &&
+                            ((gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel + GOOMBA_SIZE - 2  >= gamestate.players[i].currentCenterY) &&
+                                    (gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel + GOOMBA_SIZE - 2  <= gamestate.players[i].currentCenterY + MARIO_ROWS)) &&
+                                    gamestate.balls[j].alive == true && gamestate.balls[j].kill == false){
 
-        //if((yvel > 0 && ball->currentCenterY + yvel + BALL_SIZE + 1 >= ARENA_MAX_Y - PADDLE_WID) ||
-         //       (yvel < 0 && ball->currentCenterY + yvel <= ARENA_MIN_Y + PADDLE_WID)){
-        for(int i = 0; i < MAX_NUM_OF_PLAYERS; i++){
-            if(((ball->currentCenterX + xvel + GOOMBA_SIZE - 2 >= gamestate.players[i].currentCenterX) &&
-                    (ball->currentCenterX + xvel + GOOMBA_SIZE - 2  <= gamestate.players[i].currentCenterX + MARIO_COLUMNS)) &&
-                        ((ball->currentCenterY + yvel + GOOMBA_SIZE - 2  >= gamestate.players[i].currentCenterY) &&
-                                (ball->currentCenterY + yvel + GOOMBA_SIZE - 2  <= gamestate.players[i].currentCenterY + MARIO_ROWS))){
-                // kill this ball, and score the point
-                // set ball to dead
-                ball->alive = 0;
-                // score points
-                if(gamestate.players[i].num_lives > 0){
-                    gamestate.players[i].num_lives--;
-                }
-                if(MAX_NUM_OF_PLAYERS == 1){
-                      if(gamestate.players[i].num_lives == 0){
-                          gamestate.gameDone = true;
-                          gamestate.winner = i;
-                          #ifdef SINGLE
-                              G8RTOS_AddThread( &Game2_EndOfGameHost, 0, 0xFFFFFFFF,          "ENDGAMEHOST___" );
-                          #endif
+                    if(gamestate.players[i].num_lives > 0){
+                        gamestate.players[i].num_lives--;
+                    }
+                    if(MAX_NUM_OF_PLAYERS == 1){
+                          if(gamestate.players[i].num_lives == 0){
+                              gamestate.gameDone = true;
+                              gamestate.winner = i;
+                              #ifdef SINGLE
+                                  G8RTOS_AddThread( &Game2_EndOfGameHost, 0, 0xFFFFFFFF,          "ENDGAMEHOST___" );
+                              #endif
 
-                      }
+                          }
+                    }
+                    if(MAX_NUM_OF_PLAYERS == 2){
+                          if(gamestate.players[0].num_lives == 0){
+                              gamestate.winner = 1;
+                          }
+                          if(gamestate.players[1].num_lives == 0){
+                              gamestate.winner = 0;
+                          }
+                          if(gamestate.players[0].num_lives == 0 && gamestate.players[1].num_lives == 0){
+                              gamestate.gameDone = true;
+                              #ifdef SINGLE
+                                    G8RTOS_AddThread( &Game2_EndOfGameHost, 0, 0xFFFFFFFF,          "ENDGAMEHOST___" );
+                              #endif
+                          }
+                    }
+                    gamestate.balls[j].kill = 1;
                 }
-                if(MAX_NUM_OF_PLAYERS == 2){
-                      if(gamestate.players[0].num_lives == 0){
-                          gamestate.winner = 1;
-                      }
-                      if(gamestate.players[1].num_lives == 0){
-                          gamestate.winner = 0;
-                      }
-                      if(gamestate.players[0].num_lives == 0 && gamestate.players[1].num_lives == 0){
-                          gamestate.gameDone = true;
-                          #ifdef SINGLE
-                                G8RTOS_AddThread( &Game2_EndOfGameHost, 0, 0xFFFFFFFF,          "ENDGAMEHOST___" );
-                          #endif
-                      }
-                }
-                ball->kill = 1;
-                G8RTOS_KillSelf();
             }
+
+
+            gamestate.balls[j].currentCenterX       += gamestate.balls[j].xvel;
+            gamestate.balls[j].currentCenterY       += gamestate.balls[j].yvel;
         }
-
-
-        ball->currentCenterX       += xvel;
-        ball->currentCenterY       += yvel;
-
         sleep(35);
     }
 }
@@ -568,7 +588,6 @@ void Game2_DrawObjects()
             if(gamestate.balls[i].alive && !gamestate.balls[i].kill){
                 Game2_UpdateBallOnScreen(&previousBalls[i], &gamestate.balls[i], gamestate.balls[i].color);
             }
-
             // ALIVE && KILL = KILL HOST STATE
             else if(gamestate.balls[i].alive && gamestate.balls[i].kill){
                 Game2_UpdateBallOnScreen(&previousBalls[i], &gamestate.balls[i], BACK_COLOR);
@@ -592,7 +611,7 @@ void Game2_DrawObjects()
         }
 
         // Refresh rate --------------------
-        sleep(40);
+        sleep(50);
     }
 }
 
@@ -607,9 +626,8 @@ void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * cu
     for(int i = 0; i < GOOMBA_SIZE; i++){
         for(int j = 0; j < GOOMBA_SIZE; j++){
             G8RTOS_WaitSemaphore(&LCDREADY);
-
             LCD_SetPoint(previousBall->CenterX + j, previousBall->CenterY + i, White);
-
+            //LCD_SetPoint(currentBall->currentCenterX + j, currentBall->currentCenterY + i, goomba_map[i][j]);
             G8RTOS_SignalSemaphore(&LCDREADY);
         }
     }
@@ -622,6 +640,7 @@ void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * cu
     */
     // before erasing the original
     // draw the new ball next
+
     if(currentBall->kill != true){
         for(int i = 0; i < GOOMBA_SIZE; i++){
             for(int j = 0; j < GOOMBA_SIZE; j++){
@@ -633,6 +652,7 @@ void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * cu
             }
         }
     }
+
     previousBall->CenterX = currentBall->currentCenterX;
     previousBall->CenterY = currentBall->currentCenterY;
 
@@ -642,10 +662,30 @@ void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * cu
 /*
  * Draw players given center X center coordinate
  */
+uint16_t mario_red_map_left[MARIO_ROWS][MARIO_COLUMNS];
+uint16_t mario_green_map_left[MARIO_ROWS][MARIO_COLUMNS];
+uint16_t mario_yellow_map_left[MARIO_ROWS][MARIO_COLUMNS];
+
 void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color, int ID)
 {
     //G8RTOS_WaitSemaphore(&LCDREADY);
-
+    for (int row = 0; row < MARIO_ROWS; ++row) {
+     for (int col = 0; col < MARIO_COLUMNS; ++col) {
+      mario_red_map_left[row][MARIO_COLUMNS-1-col] = mario_red_map[row][col];
+     }
+    }
+    //G8RTOS_WaitSemaphore(&LCDREADY);
+    for (int row = 0; row < MARIO_ROWS; ++row) {
+     for (int col = 0; col < MARIO_COLUMNS; ++col) {
+      mario_green_map_left[row][MARIO_COLUMNS-1-col] = mario_green_map[row][col];
+     }
+    }
+    //G8RTOS_WaitSemaphore(&LCDREADY);
+    for (int row = 0; row < MARIO_ROWS; ++row) {
+     for (int col = 0; col < MARIO_COLUMNS; ++col) {
+      mario_yellow_map_left[row][MARIO_COLUMNS-1-col] = mario_yellow_map[row][col];
+     }
+    }
 
     if(ID == 0){
         for(int i = 0; i < MARIO_ROWS; i++){
@@ -682,11 +722,17 @@ void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color, int ID
  * Updates player based on current and new center
  *
  */
+bool DrawRight;
 void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer, int ID)
 {
         // all smart common area saving was deleted here to generalize for the quiz.
         //G8RTOS_WaitSemaphore(&LCDREADY);
-
+        if(outPlayer->currentCenterX > prevPlayerIn->CenterX){
+            DrawRight = true;
+        }
+        else if (outPlayer->currentCenterX < prevPlayerIn->CenterX){
+            DrawRight = false;
+        }
 
         if(ID == 0){
 
@@ -698,22 +744,34 @@ void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_General
                     if(prevPlayerIn->CenterX != outPlayer->currentCenterX || prevPlayerIn->CenterY != outPlayer->currentCenterY){
                         G8RTOS_WaitSemaphore(&LCDREADY);
                         LCD_SetPoint(prevPlayerIn->CenterX + j, prevPlayerIn->CenterY + i, White);
+                        //LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_red_map[i][j]);
                         G8RTOS_SignalSemaphore(&LCDREADY);
+                    }
+                }
+            }
+
+            if(DrawRight == true){
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                            G8RTOS_WaitSemaphore(&LCDREADY);
+                            LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_red_map[i][j]);
+                            G8RTOS_SignalSemaphore(&LCDREADY);
+                    }
+                }
+            }
+            else {
+
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                            G8RTOS_WaitSemaphore(&LCDREADY);
+                            LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_red_map_left[i][j]);
+                            G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
             }
             // before erasing the original
             prevPlayerIn->CenterX = outPlayer->currentCenterX;
             prevPlayerIn->CenterY = outPlayer->currentCenterY;
-            for(int i = 0; i < MARIO_ROWS; i++){
-                for(int j = 0; j < MARIO_COLUMNS; j++){
-                    if(mario_red_map[i][j] != 0xFFFF){
-                        G8RTOS_WaitSemaphore(&LCDREADY);
-                        LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_red_map[i][j]);
-                        G8RTOS_SignalSemaphore(&LCDREADY);
-                    }
-                }
-            }
         }
         if(ID == 1){
             for(int i = 0; i < MARIO_ROWS; i++){
@@ -725,18 +783,28 @@ void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_General
                     }
                 }
             }
-            // before erasing the original
-            prevPlayerIn->CenterX = outPlayer->currentCenterX;
-            prevPlayerIn->CenterY = outPlayer->currentCenterY;
-            for(int i = 0; i < MARIO_ROWS; i++){
-                for(int j = 0; j < MARIO_COLUMNS; j++){
-                    if(mario_red_map[i][j] != 0xFFFF){
-                        G8RTOS_WaitSemaphore(&LCDREADY);
-                        LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_green_map[i][j]);
-                        G8RTOS_SignalSemaphore(&LCDREADY);
+            if(DrawRight == true){
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                            G8RTOS_WaitSemaphore(&LCDREADY);
+                            LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_green_map[i][j]);
+                            G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
             }
+            else {
+
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                            G8RTOS_WaitSemaphore(&LCDREADY);
+                            LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_green_map_left[i][j]);
+                            G8RTOS_SignalSemaphore(&LCDREADY);
+                    }
+                }
+            }
+            // before erasing the original
+            prevPlayerIn->CenterX = outPlayer->currentCenterX;
+            prevPlayerIn->CenterY = outPlayer->currentCenterY;
         }
         if(ID == 2) {
             for(int i = 0; i < MARIO_ROWS; i++){
@@ -748,18 +816,28 @@ void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_General
                     }
                 }
             }
-            // before erasing the original
-            prevPlayerIn->CenterX = outPlayer->currentCenterX;
-            prevPlayerIn->CenterY = outPlayer->currentCenterY;
-            for(int i = 0; i < MARIO_ROWS; i++){
-                for(int j = 0; j < MARIO_COLUMNS; j++){
-                    if(mario_red_map[i][j] != 0xFFFF){
-                        G8RTOS_WaitSemaphore(&LCDREADY);
-                        LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_yellow_map[i][j]);
-                        G8RTOS_SignalSemaphore(&LCDREADY);
+            if(DrawRight == true){
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                            G8RTOS_WaitSemaphore(&LCDREADY);
+                            LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_yellow_map[i][j]);
+                            G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
             }
+            else {
+
+                for(int i = 0; i < MARIO_ROWS; i++){
+                    for(int j = 0; j < MARIO_COLUMNS; j++){
+                            G8RTOS_WaitSemaphore(&LCDREADY);
+                            LCD_SetPoint(outPlayer->currentCenterX + j, outPlayer->currentCenterY + i, mario_yellow_map_left[i][j]);
+                            G8RTOS_SignalSemaphore(&LCDREADY);
+                    }
+                }
+            }
+            // before erasing the original
+            prevPlayerIn->CenterX = outPlayer->currentCenterX;
+            prevPlayerIn->CenterY = outPlayer->currentCenterY;
         }
 
 
@@ -789,7 +867,7 @@ void Game2_UpdatePlayerStatus()
             uint16_t status_offset = i*STATUS_STRING_OFFSET*5.5 + 15;
             G8RTOS_WaitSemaphore(&LCDREADY);
             if(i == 0){
-                    if(gamestate.players[i].RunTime < 2){
+                    if(gamestate.players[i].RunTime < 20){
                         for(int i = 0; i < MARIO_ROWS; i++){
                             for(int j = 0; j < MARIO_COLUMNS; j++){
                                 LCD_SetPoint(j, i, mario_red_map[i][j]);
@@ -799,7 +877,7 @@ void Game2_UpdatePlayerStatus()
                 LCD_Text(status_offset, 0, status_p1_str_prev, White);
             }
             else if(i == 1){
-                if(gamestate.players[i].RunTime < 2){
+                if(gamestate.players[i].RunTime < 20){
                     for(int i = 0; i < MARIO_ROWS; i++){
                         for(int j = 0; j < MARIO_COLUMNS; j++){
                             LCD_SetPoint(j, i, mario_green_map[i][j]);
@@ -809,7 +887,7 @@ void Game2_UpdatePlayerStatus()
                 LCD_Text(status_offset, 0, status_p2_str_prev, White);
             }
             else{
-                if(gamestate.players[i].RunTime < 2){
+                if(gamestate.players[i].RunTime < 20){
                     for(int i = 0; i < MARIO_ROWS; i++){
                         for(int j = 0; j < MARIO_COLUMNS; j++){
                             LCD_SetPoint(j, i, mario_yellow_map[i][j]);
@@ -846,7 +924,6 @@ void Game2_IdleThread(){
 void Game2_EndOfGameHost(){
     // wait for semaphores
     G8RTOS_WaitSemaphore(&LCDREADY);
-    //G8RTOS_WaitSemaphore(&LEDREADY);
     G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
 
     G8RTOS_KillAllOthers();
@@ -854,7 +931,6 @@ void Game2_EndOfGameHost(){
     // force semaphores to reset here..
     // shouldn't be required, but fixes semaphore block bug
     G8RTOS_InitSemaphore(&LCDREADY, 1);
-    //G8RTOS_InitSemaphore(&LEDREADY, 1);
     G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
 
 
@@ -866,20 +942,14 @@ void Game2_EndOfGameHost(){
     }
 
     ballCount = 0;
-    for(int j = 0; j < MAX_NUM_OF_PLAYERS; j++){
-        gamestate.players[j].num_lives = 5;
-        if(gamestate.players[j].RunTime > prev_run_time){
-            prev_run_time = gamestate.players[j].RunTime;
-        }
-        gamestate.players[j].RunTime = 0;
-    }
     gamestate.winner = true;    // this notifies client kill all threads
     //SendData((uint8_t*)&gamestate, gamestate.player.IP_address, sizeof(gamestate));
     // delay for 1 secondish
+    G8RTOS_WaitSemaphore(&LCDREADY);
+
     LCD_Clear(White);
     char status_str[30];
     if(MAX_NUM_OF_PLAYERS == 1){
-        G8RTOS_WaitSemaphore(&LCDREADY);
         for(int i = 0; i < MARIO_ROWS; i++){
             for(int j = 0; j < MARIO_COLUMNS; j++){
                 LCD_SetPoint(j, i, mario_red_map[i][j]);
@@ -887,7 +957,6 @@ void Game2_EndOfGameHost(){
         }
         sprintf(status_str,"You had a run time of: %u", gamestate.players[0].RunTime);
         LCD_Text(15, 0, status_str, Black);
-        G8RTOS_SignalSemaphore(&LCDREADY);
     }
     else {
         if(gamestate.players[0].RunTime > gamestate.players[1].RunTime){
@@ -909,10 +978,20 @@ void Game2_EndOfGameHost(){
             LCD_Text(15, 0, status_str, Black);
         }
     }
+    for(int j = 0; j < MAX_NUM_OF_PLAYERS; j++){
+        gamestate.players[j].num_lives = 5;
+        if(gamestate.players[j].RunTime > prev_run_time){
+            prev_run_time = gamestate.players[j].RunTime;
+        }
+        gamestate.players[j].RunTime = 0;
+    }
+    G8RTOS_SignalSemaphore(&LCDREADY);
 
 
-    for (int i = 0; i < 500000; i++);
-    menu_writeHostOrClient();
+    sleep(2000);
+    LCD_Clear(Black);
+    menu_initMenu();
+    menu_updateMenu();
 
     // 6. Add GenerateBall, DrawObjects, ReadJoystickHost, SendDataToClient
     //      ReceiveDataFromClient, MoveLEDs (low priority), Idle
@@ -978,10 +1057,10 @@ void Game2_EndOfGameClient()
                 LCD_Text(15, 0, status_str, Black);
             }
         }
-        // delay for 1 secondish
-        for (int i = 0; i < 500000; i++);
-
-        menu_writeHostOrClient();
+        sleep(2000);
+        LCD_Clear(Black);
+        menu_initMenu();
+        menu_updateMenu();
         G8RTOS_KillSelf();
 
 

@@ -13,9 +13,9 @@
 #include "common_threads.h"
 /*********************************************** Includes ********************************************************************/
 #define DEFAULT_PRIORITY    15
-#define MAX_NUM_OF_BALLS 20
+#define MAX_NUM_OF_BALLS 10
 #define MAX_NUM_OF_PLAYERS 1
-#define BALL_SIZE 2
+#define BALL_SIZE 3
 #define ARENA_MAX_X 320
 #define ARENA_MAX_Y 240
 #define ARENA_MIN_X 0
@@ -74,6 +74,8 @@ typedef struct
 {
     int16_t currentCenterX;
     int16_t currentCenterY;
+    int16_t xvel;
+    int16_t yvel;
     uint16_t color;
     bool moving;
     bool alive;
