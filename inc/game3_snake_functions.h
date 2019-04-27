@@ -11,6 +11,7 @@
 #include "common_threads.h"
 
 #define SN_SNAKE_MAX_LENGTH     10
+#define HEAD                    0
 
 // This represents one block of
 // the snake. Head and tail are of
@@ -47,6 +48,6 @@ point_t game3_rmSnakeTail(int8_t player_num);
 // This function will search through the linked
 // list until the correct snake structure is found
 // and return the center value.
-point_t game3_viewAt(int8_t i, int8_t player_num);
+point_t game3_snakeAt(int8_t index, int8_t player_num);
 
 #endif /* INC_GAME3_SNAKE_FUNCTIONS_H_ */
