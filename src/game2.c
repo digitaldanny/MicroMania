@@ -23,6 +23,8 @@
 
 
 uint8_t ballCount = 0;
+uint8_t ShroomCount = 0;
+Game2_PrevShroom_t previousShrooms[MAX_NUM_OF_SHROOMS];
 Game2_PrevBall_t previousBalls[MAX_NUM_OF_BALLS];
 Game2_SpecificPlayerInfo_t client_player;
 Game2_GameState_t gamestate;
@@ -107,14 +109,37 @@ uint16_t goomba_map[8][8] = {
   0xffff, 0xABC8, 0xFEAF, 0xFEAF, 0xFEAF, 0xFEAF, 0xABC8, 0xffff,
   0xffff, 0xABC8, 0xABC8, 0xFEAF, 0xFEAF, 0xABC8, 0xABC8, 0xffff
 };
+#define SHROOM_SIZE 16
+uint16_t shroom_map[16][16] = {
+  /*Pixel format: Red: 5 bit, Green: 6 bit, Blue: 5 bit*/
+  0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+  0xffff, 0xffff, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff, 0x07C0, 0x07C0, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff,
+  0xffff, 0xffff, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0x07C0, 0x07C0, 0xffff, 0xffff, 0xffff, 0x0000, 0x0000, 0xffff, 0xffff,
+  0xffff, 0x0000, 0x0000, 0x07C0, 0xffff, 0xffff, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0xffff, 0xffff, 0x07C0, 0x0000, 0x0000, 0xffff,
+  0xffff, 0x0000, 0xffff, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0xffff, 0x0000, 0xffff,
+  0x0000, 0x0000, 0xffff, 0xffff, 0x07C0, 0x07C0, 0xffff, 0xffff, 0xffff, 0xffff, 0x07C0, 0x07C0, 0xffff, 0xffff, 0x0000, 0x0000,
+  0x0000, 0xffff, 0xffff, 0xffff, 0x07C0, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x07C0, 0xffff, 0xffff, 0xffff, 0x0000,
+  0x0000, 0xffff, 0xffff, 0xffff, 0x07C0, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x07C0, 0xffff, 0xffff, 0xffff, 0x0000,
+  0x0000, 0xffff, 0xffff, 0xffff, 0x07C0, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x07C0, 0xffff, 0xffff, 0xffff, 0x0000,
+  0x0000, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0xffff, 0xffff, 0xffff, 0xffff, 0x8925, 0x07C0, 0x07C0, 0x07C0, 0x07C0, 0x0000,
+  0x0000, 0x07C0, 0x07C0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x07C0, 0x07C0, 0x0000,
+  0x0000, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0x0000, 0x0000, 0x0000, 0x0000,
+  0xffff, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0x0000, 0x0000, 0xffff,
+  0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff,
+  0xffff, 0xffff, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x0000, 0x0000, 0xffff, 0xffff,
+  0xffff, 0xffff, 0xffff, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff
+};
 //add host threads
 void Game2_addHostThreads(){
     G8RTOS_AddThread( &Game2_GenerateBall, 20, 0xFFFFFFFF,          "GENERATE_BALL___" );
+    G8RTOS_AddThread( &Game2_GenerateShroom, 20, 0xFFFFFFFF,          "GENERATE_BALL___" );
     G8RTOS_AddThread( &Game2_DrawObjects, 10, 0xFFFFFFFF,           "DRAW_OBJECTS____" );
     G8RTOS_AddThread( &Game2_ReadJoystickHost, 20, 0xFFFFFFFF,      "READ_JOYSTICK___" );
     G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,    "UpdatePlayerStatus" );
     G8RTOS_AddThread( &Game2_IdleThread, 255, 0xFFFFFFFF,           "IDLE____________" );
     G8RTOS_AddThread(&Game2_MoveBall, 10, 0xFFFFFFFF, "MOVE_BALL_______");
+    G8RTOS_AddThread(&Game2_MoveShroom, 11, 0xFFFFFFFF, "MOVE_BALL_______");
+
     #ifndef SINGLE
         G8RTOS_AddThread( &Game2_ReceiveDataFromClient, DEFAULT_PRIORITY, 0xFFFFFFFF, "RECEIVE_DATA____" );
         G8RTOS_AddThread( &Game2_SendDataToClient, DEFAULT_PRIORITY, 0xFFFFFFFF,      "SEND_DATA_______" );
@@ -234,6 +259,50 @@ void Game2_GenerateBall()
             ballCount++;
         }
         sleep(ballCount * BALL_GEN_SLEEP);
+    }
+}
+
+/*
+ * Generate Shroom thread
+ */
+// Adds another ball thread. Sleeps proportional to the number of balls
+// currently in play.
+void Game2_GenerateShroom()
+{
+    while(1)
+    {
+        // wake up the next available ball in the array if
+        // the max number of balls have not been generated.
+        if ( ShroomCount < MAX_NUM_OF_SHROOMS )
+        {
+
+            for (int i = 0; i < MAX_NUM_OF_SHROOMS; i++)
+            {
+                if ( gamestate.shroom[i].alive == 0 && gamestate.shroom[i].kill == 0)
+                {
+                    gamestate.shroom[i].alive = 1;
+                    gamestate.shroom[i].kill = 0;
+                    gamestate.shroom[i].currentCenterX = (rand() % (ARENA_MAX_X - ARENA_MIN_X));
+                    if(gamestate.shroom[i].currentCenterX < ARENA_MIN_X){
+                        gamestate.shroom[i].currentCenterX += ARENA_MIN_X;
+                    }
+                    gamestate.shroom[i].currentCenterY = (rand() % (ARENA_MAX_Y - ARENA_MIN_Y));
+                    if(gamestate.shroom[i].currentCenterY < ARENA_MIN_Y){
+                        gamestate.shroom[i].currentCenterY += ARENA_MIN_Y;
+                    }
+                    previousShrooms[i].CenterX = gamestate.shroom[i].currentCenterX;
+                    previousShrooms[i].CenterY = gamestate.shroom[i].currentCenterY;
+                    gamestate.shroom[i].xvel = rand() % MAX_SHROOM_SPEED + 1;
+                    gamestate.shroom[i].yvel = rand() % MAX_SHROOM_SPEED + 1;
+                    if(gamestate.shroom[i].currentCenterY > 120){
+                        gamestate.shroom[i].yvel = -gamestate.shroom[i].yvel;
+                    }
+                    break;
+                }
+            }
+            ShroomCount++;
+        }
+        sleep(SHROOM_SLEEP_COUNT);
     }
 }
 
@@ -399,40 +468,106 @@ void Game2_ReadJoystickClient(){
  *              a constant velocity, handling collisions, and
  *              incrementing the score for whichever player scored.
  */
+void Game2_MoveShroom()
+{
+    // initialize the ball properties for the ball
+    // that will be used in this thread.
+
+    while(1){
+        for(int j = 0; j < MAX_NUM_OF_SHROOMS; j++){
+            // test if hitting the right or left side wall
+            if((gamestate.shroom[j].xvel > 0 && gamestate.shroom[j].currentCenterX + gamestate.shroom[j].xvel + SHROOM_SIZE + 1 >= ARENA_MAX_X) ||
+               (gamestate.shroom[j].xvel < 0 && gamestate.shroom[j].currentCenterX + gamestate.shroom[j].xvel - 1 - SHROOM_SIZE<= ARENA_MIN_X)){
+                gamestate.shroom[j].xvel = -gamestate.shroom[j].xvel;
+            }
+
+            // test if hitting the top or bottom paddle
+            if(((gamestate.shroom[j].yvel > 0 && gamestate.shroom[j].currentCenterY + gamestate.shroom[j].yvel + SHROOM_SIZE + 1 >= ARENA_MAX_Y)) ||
+               ((gamestate.shroom[j].yvel < 0 && gamestate.shroom[j].currentCenterY + gamestate.shroom[j].yvel - 1 <= ARENA_MIN_Y))){
+
+                // reverse the y direction
+                gamestate.shroom[j].yvel = -gamestate.shroom[j].yvel;
+
+                // ball directions for top
+                if(gamestate.shroom[j].yvel > 0){
+                    if(gamestate.shroom[j].currentCenterX <= ARENA_MAX_X >>1){
+                        gamestate.shroom[j].xvel -= 1;
+                        if(gamestate.shroom[j].xvel > 0){
+                            gamestate.shroom[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.shroom[j].yvel -= 1;
+                        }
+                    }
+                    else if(gamestate.shroom[j].currentCenterX > ARENA_MAX_X>>1){
+                        gamestate.shroom[j].xvel += 1;
+                        if(gamestate.shroom[j].xvel < 0){
+                            gamestate.shroom[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.shroom[j].yvel -= 1;
+                        }
+                    }
+                    if(gamestate.shroom[j].yvel == 0){
+                        gamestate.shroom[j].yvel = 1;
+                    }
+                }
+
+                // ball directions for bottom
+                else{
+                    if(gamestate.shroom[j].currentCenterX <= ARENA_MAX_X>>1){
+                        gamestate.shroom[j].xvel += 1;
+                        if(gamestate.shroom[j].xvel > 0){
+                            gamestate.shroom[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.shroom[j].yvel -= 1;
+                        }
+                    }
+                    else if(gamestate.shroom[j].currentCenterX > ARENA_MAX_X>>1){
+                        gamestate.shroom[j].xvel -= 1;
+                        if(gamestate.shroom[j].xvel < 0){
+                            gamestate.shroom[j].yvel += 1;
+                        }
+                        else{
+                            gamestate.shroom[j].yvel -= 1;
+                        }
+                    }
+                    if(gamestate.shroom[j].yvel == 0){  gamestate.shroom[j].yvel = -1;}
+                }
+            }
+
+            for(int i = 0; i < MAX_NUM_OF_PLAYERS; i++){
+                if(((gamestate.shroom[j].currentCenterX + gamestate.shroom[j].xvel + SHROOM_SIZE/2 >= gamestate.players[i].currentCenterX) &&
+                        (gamestate.shroom[j].currentCenterX + gamestate.shroom[j].xvel + SHROOM_SIZE/2 <= gamestate.players[i].currentCenterX + MARIO_COLUMNS)) &&
+                            ((gamestate.shroom[j].currentCenterY + gamestate.shroom[j].yvel + SHROOM_SIZE/2 >= gamestate.players[i].currentCenterY) &&
+                                    (gamestate.shroom[j].currentCenterY + gamestate.shroom[j].yvel + SHROOM_SIZE/2  <= gamestate.players[i].currentCenterY + MARIO_ROWS)) &&
+                                    gamestate.shroom[j].alive == true && gamestate.shroom[j].kill == false){
+                        gamestate.players[i].num_lives++;
+                        gamestate.shroom[j].kill = 1;
+                    }
+                }
+
+
+            gamestate.shroom[j].currentCenterX       += gamestate.shroom[j].xvel;
+            gamestate.shroom[j].currentCenterY       += gamestate.shroom[j].yvel;
+        }
+        sleep(35);
+    }
+}
+
+/*
+ * SUMMARY: Thread to move a single ball
+ *
+ * DESCRIPTION: This thread is responsible for moving the ball at
+ *              a constant velocity, handling collisions, and
+ *              incrementing the score for whichever player scored.
+ */
 void Game2_MoveBall()
 {
     // initialize the ball properties for the ball
     // that will be used in this thread.
-    /*
-    Game2_Ball_t * ball;
-    Game2_PrevBall_t * previousBall;
 
-    for (int i = 0; i < MAX_NUM_OF_BALLS; i++)
-    {
-        ball = &gamestate.balls[i];
-        previousBall = &previousBalls[i];
-        if ( ball->alive == 0 )
-        {
-            //previousBall->CenterX = 0;
-            //previousBall->CenterY = 120;
-            ball->alive = 1;
-            ball->kill = 0;
-            ball->color = BACK_COLOR;
-            ball->currentCenterX = BALL_SIZE * (rand() % ((ARENA_MAX_X - ARENA_MIN_X - BALL_SIZE)/BALL_SIZE)) + ARENA_MIN_X + 1;
-            ball->currentCenterY = BALL_SIZE * (rand() % (((ARENA_MAX_Y - 80 - ARENA_MIN_Y)/BALL_SIZE)) + 10);
-            previousBall->CenterX = ball->currentCenterX;
-            previousBall->CenterY = ball->currentCenterY;
-            break;
-        }
-    }
-
-    int16_t xvel = rand() % MAX_BALL_SPEED + 1;
-    int16_t yvel = rand() % MAX_BALL_SPEED + 1;
-
-    if(ball->currentCenterY > 120){
-        yvel = -yvel;
-    }
-    */
     while(1){
         for(int j = 0; j < MAX_NUM_OF_BALLS; j++){
             // test if hitting the right or left side wall
@@ -496,10 +631,10 @@ void Game2_MoveBall()
             }
 
             for(int i = 0; i < MAX_NUM_OF_PLAYERS; i++){
-                if(((gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel + GOOMBA_SIZE - 2 >= gamestate.players[i].currentCenterX) &&
-                        (gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel + GOOMBA_SIZE - 2  <= gamestate.players[i].currentCenterX + MARIO_COLUMNS)) &&
-                            ((gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel + GOOMBA_SIZE - 2  >= gamestate.players[i].currentCenterY) &&
-                                    (gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel + GOOMBA_SIZE - 2  <= gamestate.players[i].currentCenterY + MARIO_ROWS)) &&
+                if(((gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel + GOOMBA_SIZE/2 >= gamestate.players[i].currentCenterX) &&
+                        (gamestate.balls[j].currentCenterX + gamestate.balls[j].xvel + GOOMBA_SIZE/2 <= gamestate.players[i].currentCenterX + MARIO_COLUMNS)) &&
+                            ((gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel + GOOMBA_SIZE/2  >= gamestate.players[i].currentCenterY) &&
+                                    (gamestate.balls[j].currentCenterY + gamestate.balls[j].yvel + GOOMBA_SIZE/2  <= gamestate.players[i].currentCenterY + MARIO_ROWS)) &&
                                     gamestate.balls[j].alive == true && gamestate.balls[j].kill == false){
 
                     if(gamestate.players[i].num_lives > 0){
@@ -540,7 +675,6 @@ void Game2_MoveBall()
         sleep(35);
     }
 }
-
 //common threads
 void Game2_DrawObjects()
 {
@@ -605,6 +739,30 @@ void Game2_DrawObjects()
                 Game2_UpdateBallOnScreen(&previousBalls[i], &gamestate.balls[i], BACK_COLOR);
                 gamestate.balls[i].kill = 0;
             }
+        }
+            //update shroom
+            // ALIVE && !KILL = REDRAW STATE
+            for(int i = 0; i < MAX_NUM_OF_SHROOMS; i++){
+            if(gamestate.shroom[i].alive && !gamestate.shroom[i].kill){
+                Game2_UpdateShroomOnScreen(&previousShrooms[i], &gamestate.shroom[i]);
+            }
+            // ALIVE && KILL = KILL HOST STATE
+            else if(gamestate.shroom[i].alive && gamestate.shroom[i].kill){
+                Game2_UpdateShroomOnScreen(&previousShrooms[i], &gamestate.shroom[i]);
+                gamestate.shroom[i].alive = 0;
+                ShroomCount--;
+            }
+
+            // !ALIVE && KILL = KILL CLIENT STATE
+            // Because our sleep is 20 ms which is very high, our while loop
+            // doesn't run again before the packet is sent. This allows the
+            // client to enter this state before the host enters this state
+            // and delete the ball on the client side.
+            else if ( !gamestate.shroom[i].alive && gamestate.shroom[i].kill )
+            {
+                Game2_UpdateShroomOnScreen(&previousShrooms[i], &gamestate.shroom[i]);
+                gamestate.shroom[i].kill = 0;
+            }
 
             // !ALIVE && !KILL = NULL STATE
             // else do nothing .. (ALL 4 STATES ARE USED WITH THESE 2 BOOLEANS)
@@ -614,32 +772,44 @@ void Game2_DrawObjects()
         sleep(50);
     }
 }
+/*
+ * Function updates shroom position on screen
+ */
+void Game2_UpdateShroomOnScreen(Game2_PrevShroom_t * previousShroom, Game2_Shroom_t * currentShroom)
+{
 
+    G8RTOS_WaitSemaphore(&LCDREADY);
+    LCD_DrawRectangle(previousShroom->CenterX, previousShroom->CenterX + 15, previousShroom->CenterY, previousShroom->CenterY + 15, White);
+    G8RTOS_SignalSemaphore(&LCDREADY);
+
+    if(currentShroom->kill != true){
+        for(int i = 0; i < SHROOM_SIZE; i++){
+            for(int j = 0; j < SHROOM_SIZE; j++){
+                G8RTOS_WaitSemaphore(&LCDREADY);
+
+                LCD_SetPoint(currentShroom->currentCenterX + j, currentShroom->currentCenterY + i, shroom_map[i][j]);
+
+                G8RTOS_SignalSemaphore(&LCDREADY);
+            }
+        }
+    }
+
+    previousShroom->CenterX = currentShroom->currentCenterX;
+    previousShroom->CenterY = currentShroom->currentCenterY;
+
+    //G8RTOS_SignalSemaphore(&LCDREADY);
+}
 /*
  * Function updates ball position on screen
  */
 void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * currentBall, uint16_t outColor)
 {
-    //G8RTOS_WaitSemaphore(&LCDREADY);
-    // erase the old ball first
 
-    for(int i = 0; i < GOOMBA_SIZE; i++){
-        for(int j = 0; j < GOOMBA_SIZE; j++){
-            G8RTOS_WaitSemaphore(&LCDREADY);
-            LCD_SetPoint(previousBall->CenterX + j, previousBall->CenterY + i, White);
-            //LCD_SetPoint(currentBall->currentCenterX + j, currentBall->currentCenterY + i, goomba_map[i][j]);
-            G8RTOS_SignalSemaphore(&LCDREADY);
-        }
-    }
+    G8RTOS_WaitSemaphore(&LCDREADY);
 
-    /*
-    LCD_fillCircle(previousBall->CenterX, previousBall->CenterY, 3, White);
-    previousBall->CenterX = currentBall->currentCenterX;
-    previousBall->CenterY = currentBall->currentCenterY;
-    LCD_fillCircle(currentBall->currentCenterX, currentBall->currentCenterY, 3, Blue);
-    */
-    // before erasing the original
-    // draw the new ball next
+    LCD_DrawRectangle(previousBall->CenterX, previousBall->CenterX + 7, previousBall->CenterY, previousBall->CenterY + 7, White);
+
+    G8RTOS_SignalSemaphore(&LCDREADY);
 
     if(currentBall->kill != true){
         for(int i = 0; i < GOOMBA_SIZE; i++){
@@ -656,7 +826,6 @@ void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * cu
     previousBall->CenterX = currentBall->currentCenterX;
     previousBall->CenterY = currentBall->currentCenterY;
 
-    //G8RTOS_SignalSemaphore(&LCDREADY);
 }
 
 /*
@@ -738,7 +907,8 @@ void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_General
 
             // // erase the UNCOMMON old player position first
             //LCD_DrawRectangle(prevPlayerIn->CenterX, prevPlayerIn->CenterX + MARIO_COLUMNS,
-            //                  prevPlayerIn->CenterY, prevPlayerIn->CenterY + MARIO_ROWS, BACK_COLOR);
+            //                  prevPlayerIn->CenterY, prevPlayerIn->CenterY + MARIO_ROWS, White);
+
             for(int i = 0; i < MARIO_ROWS; i++){
                 for(int j = 0; j < MARIO_COLUMNS; j++){
                     if(prevPlayerIn->CenterX != outPlayer->currentCenterX || prevPlayerIn->CenterY != outPlayer->currentCenterY){
@@ -940,8 +1110,12 @@ void Game2_EndOfGameHost(){
         gamestate.balls[i].alive = 0;
         gamestate.balls[i].kill = 0;
     }
-
     ballCount = 0;
+    for(int i = 0; i < MAX_NUM_OF_SHROOMS; i++){
+        gamestate.shroom[i].alive = 0;
+        gamestate.shroom[i].kill = 0;
+    }
+    ShroomCount = 0;
     gamestate.winner = true;    // this notifies client kill all threads
     //SendData((uint8_t*)&gamestate, gamestate.player.IP_address, sizeof(gamestate));
     // delay for 1 secondish
@@ -1024,6 +1198,11 @@ void Game2_EndOfGameClient()
         }
 
         ballCount = 0;
+        for(int i = 0; i < MAX_NUM_OF_SHROOMS; i++){
+            gamestate.shroom[i].alive = 0;
+            gamestate.shroom[i].kill = 0;
+        }
+        ShroomCount = 0;
         LCD_Clear(White);
         char status_str[30];
         if(MAX_NUM_OF_PLAYERS == 1){

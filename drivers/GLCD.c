@@ -633,18 +633,22 @@ void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEn
 
     // fast write in blocks
     unsigned int len = (unsigned int)(xEnd - xStart + 1) * (unsigned int)(yEnd - yStart + 1);
-
+    BITBAND_PERI(P7->OUT,  2) = 0;   /* RS low */
     LCD_WriteIndex(0x0022);
-    LCD_Send( Color );
     BITBAND_PERI(P7->OUT,  2) = 1;   /* RS high */
+    LCD_Send( Color );
     for( int index = 0; index < len; index++ )
     {
         BITBAND_PERI(P10->OUT,  1) = 0;   /* Wr low */
-        //for(int i = 0; i < 10; i++){
+        for(int i = 0; i < 10; i++){
 
-        //}
+        }
         BITBAND_PERI(P10->OUT,  1) = 1;   /* Wr high */
     }
+    LCD_WriteReg(HOR_ADDR_START_POS,    0  );   /* Horizontal GRAM Start Address    */
+    LCD_WriteReg(HOR_ADDR_END_POS,      239    );   /* Horizontal GRAM End Address      */
+    LCD_WriteReg(VERT_ADDR_START_POS,   0  );   /* Vertical GRAM Start Address      */
+    LCD_WriteReg(VERT_ADDR_END_POS,     319    );   /* Vertical GRAM Start Address      */
 }
 
 /*********************************************************************************************************

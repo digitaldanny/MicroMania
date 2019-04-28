@@ -15,7 +15,9 @@
 #define DEFAULT_PRIORITY    15
 #define MAX_NUM_OF_BALLS 10
 #define MAX_NUM_OF_PLAYERS 1
+#define MAX_NUM_OF_SHROOMS 1
 #define BALL_SIZE 3
+#define SHROOM_SIZE 16
 #define ARENA_MAX_X 320
 #define ARENA_MAX_Y 240
 #define ARENA_MIN_X 0
@@ -23,6 +25,9 @@
 /* Maximum ball speed */
 #define MAX_BALL_SPEED               3
 #define MIN_BALL_SPEED               1
+#define MAX_SHROOM_SPEED               3
+#define MIN_SHROOM_SPEED               1
+#define SHROOM_SLEEP_COUNT              5000
 #define LIVES 5
 #define BALL_GEN_SLEEP      200 // 10 second increments increasing linearly
 #define PLAYER_OFFSET 5
@@ -81,7 +86,18 @@ typedef struct
     bool alive;
     bool kill;
 } Game2_Ball_t;
-
+/*
+ * Struct of all the balls, only changed by the host
+ */
+typedef struct
+{
+    int16_t currentCenterX;
+    int16_t currentCenterY;
+    int16_t xvel;
+    int16_t yvel;
+    bool alive;
+    bool kill;
+} Game2_Shroom_t;
 
 /*
  * Struct to be sent from the host to the client
@@ -91,6 +107,7 @@ typedef struct
     Game2_SpecificPlayerInfo_t player;
     Game2_GeneralPlayerInfo_t players[MAX_NUM_OF_PLAYERS];
     Game2_Ball_t balls[MAX_NUM_OF_BALLS];
+    Game2_Shroom_t shroom[MAX_NUM_OF_SHROOMS];
     uint16_t numberOfBalls;
     bool winner;
     bool gameDone;
@@ -116,6 +133,15 @@ typedef struct
     int16_t CenterX;
     int16_t CenterY;
 }Game2_PrevPlayer_t;
+
+/*
+ * Struct of all the previous players locations, only changed by self for drawing
+ */
+typedef struct
+{
+    int16_t CenterX;
+    int16_t CenterY;
+}Game2_PrevShroom_t;
 
 
 /*********************************************** Client Threads *********************************************************************/
@@ -175,7 +201,12 @@ void Game2_EndOfGameHost();
 
 void Game2_GenerateBall();
 
+void Game2_GenerateShroom();
+
+
 void Game2_MoveBall();
+
+void Game2_MoveShroom();
 
 void Game2_UpdateBallColors();
 
@@ -206,6 +237,9 @@ void Game2_UpdatePlayerStatus();
 void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer, int ID);
 
 void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * currentBall, uint16_t outColor);
+
+void Game2_UpdateShroomOnScreen(Game2_PrevShroom_t * previousBall, Game2_Shroom_t * currentBall);
+
 
 void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color, int ID);
 
