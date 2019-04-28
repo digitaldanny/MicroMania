@@ -1,4 +1,4 @@
-#define SINGLE
+#define MULTI
 
 /*
  *  menu.c
@@ -9,6 +9,7 @@
  *  UPDATES     :
  *  4/18/2019   : File initialization.
  *  4/24/2019   : Fixed the sizing inconsistency issue for the menu blocks
+ *  4/28/2019   : Multi-player menu navigation stabilized.
  *
  *  TODO        :
  *
@@ -20,7 +21,8 @@
 HostToClient_t packet_HostToClient;
 HostToClient_t packet_zipped;
 ClientToHost_t packet_ClientToHost;
-uint8_t numPlayers;
+static uint8_t numPlayers;
+uint8_t turn = 0;
 
 /*********************************************** Functions ********************************************************************/
 // opening menu to choose between host or client
@@ -50,7 +52,7 @@ void menu_addThreadsHost ( void )
 
 void menu_addThreadsClient ( void )
 {
-    G8RTOS_AddThread(&menu_ReceiveDataFromHost, 15, 0xFFFFFFFF, "SEND_DATA_2_HOST");
+    G8RTOS_AddThread(&menu_ReceiveDataFromHost, 15, 0xFFFFFFFF, "REC_DATA_FR_HOST");
     G8RTOS_AddThread(&common_IdleThread, 255, 0xFFFFFFFF, "IDLE");
 }
 
@@ -126,9 +128,11 @@ void menu_updateMenu ( void )
 
         }
 
+#ifdef SINGLE
         // update the previous game number so that the LCD only has to
         // update when a new game number is chosen.
         packet_HostToClient.prev_game_number = packet_HostToClient.game_number;
+#endif
     }
 }
 /*********************************************** Host Threads *********************************************************************/
@@ -152,6 +156,8 @@ void menu_MenuHost ( void )
 
     // hardware initializations
     common_buttons_init();
+    turn = 0;
+    G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
 
     P2->OUT &= ~(BIT0 | BIT1 | BIT2); // initialize led's off
     P2->DIR |= (BIT0 | BIT1 | BIT2); // set R.G.B direction
@@ -186,13 +192,14 @@ void menu_MenuHost ( void )
 
     while (1)
     {
-        menu_updateMenu();
 
         // if the player enters the common button interrupt,
         // with the up button, the up_button boolean will get set.
         if ( buttonUP_pressed ) packet_HostToClient.choice_made = true;
 
 #ifdef SINGLE
+        menu_updateMenu();
+
         // Check if the game choice has been made. If yes, add those threads
         if ( packet_HostToClient.choice_made == true )
             G8RTOS_AddThread(&ExitMenuHost, 0, 0xFFFFFFFF, "END_HOST");
@@ -206,10 +213,15 @@ void menu_SendDataToClient ( void )
 {
     while (1)
     {
-        // 2. Send packet
         G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
         SendData( (uint8_t*)&packet_HostToClient, packet_HostToClient.client.IP_address, sizeof(packet_HostToClient) );
         G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
+
+        menu_updateMenu();
+
+        // update the previous game number so that the LCD only has to
+        // update when a new game number is chosen.
+        packet_HostToClient.prev_game_number = packet_HostToClient.game_number;
 
         // Check if the game choice has been made. If yes, add those threads
         if ( packet_HostToClient.choice_made == true )
@@ -314,7 +326,7 @@ void menu_JoystickHost ( void )
                 packet_HostToClient.game_number = 0;
         }
 
-        sleep(15);
+        sleep(10);
     }
 }
 
@@ -349,6 +361,8 @@ void ExitMenuHost ( void )
      */
     if ( packet_HostToClient.game_number == G_SNAKE )
         G8RTOS_AddThread(&game3_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
+    else
+        LCD_Clear(LCD_PURPLE);
 
     // reset so a choice can be made again later
     packet_HostToClient.choice_made = false;
@@ -377,8 +391,8 @@ void menu_MenuClient ( void )
     do
     {
         SendData(       (uint8_t*)&packet_ClientToHost, HOST_IP_ADDR, sizeof(packet_ClientToHost) );   // start handshake
-        ReceiveData(    (uint8_t*)&packet_ClientToHost, sizeof(packet_ClientToHost) );   // check if host acknowledges
-    } while( packet_ClientToHost.joined == false );
+        ReceiveData(    (uint8_t*)&packet_HostToClient, sizeof(packet_HostToClient) );   // check if host acknowledges
+    } while( packet_HostToClient.client.joined == false );
 
     // 4. Acknowledge client to tell them they have received
     // the message about joining the game and the game can begin.
@@ -393,11 +407,17 @@ void menu_MenuClient ( void )
     menu_addThreadsClient();
     menu_initMenu();
 
-    while (1)
+#ifdef SINGLE
+    while(1)
     {
-        menu_updateMenu();
+
         sleep(10);
     }
+#endif
+
+#ifdef MULTI
+    G8RTOS_KillSelf();
+#endif
 }
 
 void menu_ReceiveDataFromHost ( void )
@@ -412,7 +432,10 @@ void menu_ReceiveDataFromHost ( void )
         // check that the data was correctly synchronized then
         // unpack the packet into the global gamestate.
         if ( packet_zipped.client.IP_address == getLocalIP() )
+        {
             packet_HostToClient = packet_zipped;
+            menu_updateMenu();
+        }
 
         // 3. Check if the game is done. Add EndOfGameHost thread if done.
         if ( packet_HostToClient.choice_made == true )
@@ -454,6 +477,8 @@ void ExitMenuClient ( void )
         game4_addClientThreads();
     }
     */
+    if ( packet_HostToClient.game_number == G_SNAKE )
+        G8RTOS_AddThread(&game3_JoinGame, 16, 0xFFFFFFFF, "JOIN_SNAKE");
 
     packet_HostToClient.choice_made = false;
 

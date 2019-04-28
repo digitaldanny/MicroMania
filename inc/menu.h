@@ -59,6 +59,7 @@
 #define QUAD_4_MAX_Y        MAX_SCREEN_Y
 #define QUAD_4_MIN_Y        MAX_SCREEN_Y / 2
 
+#define SEND_TURNS          10
 /*********************************************** Typedefs ********************************************************************/
 
 // CLIENT TO HOST data structure
@@ -105,11 +106,13 @@ void menu_MenuHost ( void );
 void menu_SendDataToClient ( void );
 void menu_JoystickHost ( void );
 void ExitMenuHost ( void );
+void menu_ReceiveDataFromClient ( void );
 
 /*********************************************** Host Threads *********************************************************************/
 void menu_MenuClient ( void );
 void menu_ReceiveDataFromHost ( void );
 void ExitMenuClient ( void );
+void menu_SendDataToHost();
 
 /*********************************************** Aperiodic Threads *********************************************************************/
 void menu_ButtonPress ( void );
