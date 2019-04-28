@@ -80,6 +80,35 @@ void game3_assignPointers(int8_t player_num)
     }
 }
 
+// returns the center value for the current
+// tail
+point_t game3_getTail(int8_t player_num)
+{
+    game3_assignPointers(player_num);
+    return tail->center;
+}
+
+// returns the center value for the current
+// head
+point_t game3_getHead(int8_t player_num)
+{
+    game3_assignPointers(player_num);
+    return head->center;
+}
+
+// returns "TRUE" if the element is equal to
+// the tail
+bool game3_isTail(int8_t index, int8_t player_num)
+{
+    game3_assignPointers(player_num);
+
+    if ( tail->center.x == game3_snakeAt(index, player_num).x
+            && tail->center.y == game3_snakeAt(index, player_num).y)
+        return true;
+    else
+        return false;
+}
+
 // FUCTIONS ---------------------------------
 // This function initializes the linked list
 // for the snake structure
@@ -314,3 +343,65 @@ int8_t game3_snakeLength(int8_t player_num)
 
     return (*size);
 }
+
+// COMPARISON FUNCTIONS -------------------------------
+
+// This function accesses the index of the linked
+// list and determines whether the X/Y value of the
+// NEXT/PREV node of the linked list has the same X/Y
+bool game3_compAt (int8_t index, int8_t player_num, comp_t comparison, comp_t axis)
+{
+    bool isEqual = false;
+
+    // point to the correct snake information
+    game3_assignPointers(player_num);
+
+    // locate the requested index of the linked list
+    // for this player's snake
+    if ( index < SN_SNAKE_MAX_LENGTH )
+    {
+        // first go to the appropriate
+        // index of the linked list.
+        for (int8_t i = 0; i < index; i++)
+            body = body->next;
+
+        // make the appropriate comparison for the
+        // requested axis (X or Y)
+        if ( axis == Y )
+        {
+            // make the appropriate comparison for
+            // whether the user requested a comparison
+            // for the NEXT element or the PREV element
+            if ( comparison == NEXT )
+            {
+                if ( body->center.y == body->next->center.y )
+                    isEqual = true;
+            }
+            else if ( comparison == PREV )
+            {
+                if ( body->center.y == body->prev->center.y )
+                    isEqual = true;
+            }
+        }
+
+        else if ( axis == X )
+        {
+            // make the appropriate comparison for
+            // whether the user requested a comparison
+            // for the NEXT element or the PREV element
+            if ( comparison == NEXT )
+            {
+                if ( body->center.x == body->next->center.x )
+                    isEqual = true;
+            }
+            else if ( comparison == PREV )
+            {
+                if ( body->center.x == body->prev->center.x )
+                    isEqual = true;
+            }
+        }
+    }
+
+    return isEqual;
+}
+

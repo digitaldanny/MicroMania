@@ -10,7 +10,7 @@
 
 #include "common_threads.h"
 
-#define SN_SNAKE_MAX_LENGTH     50
+#define SN_SNAKE_MAX_LENGTH     5
 
 // This represents one block of
 // the snake. Head and tail are of
@@ -23,10 +23,31 @@ typedef struct snake
     bool alive;
 } snake_t;
 
+typedef enum
+{
+    PREV,
+    NEXT,
+    X,
+    Y
+} comp_t;
+
 // HELPER FUNCTIONS --------------------
+
 // This function will point the head, tail, and
 // body functions to the correct player properties
 void game3_assignPointers(int8_t player_num);
+
+// returns the center value for the current
+// tail
+point_t game3_getTail(int8_t player_num);
+
+// returns the center value for the current
+// head
+point_t game3_getHead(int8_t player_num);
+
+// returns "TRUE" if the element is equal to
+// the tail
+bool game3_isTail(int8_t index, int8_t player_num);
 
 // FUNCTIONS ---------------------------
 
@@ -55,5 +76,13 @@ bool game3_limitReached(int8_t player_num);
 
 // This function returns the current length of the snake
 int8_t game3_snakeLength(int8_t player_num);
+
+// COMPARISION FUNCTIONS ----------------
+
+// This function accesses the index of the linked
+// list and determines whether the Y value of the
+// NEXT node of the linked list has the same Y
+bool game3_compAt (int8_t index, int8_t player_num,
+                    comp_t compare, comp_t axis);
 
 #endif /* INC_GAME3_SNAKE_FUNCTIONS_H_ */
