@@ -25,6 +25,8 @@
 
 #include "game3.h"
 
+static uint8_t numPlayers;
+
 // semaphores ----------------
 semaphore_t CENTER_SEMAPHORE;
 
@@ -47,11 +49,15 @@ point_t mappedCenterEndDraw;
 point_t mappedCenterStartErase;
 point_t mappedCenterEndErase;
 
+bool do_delete;
+bool do_draw;
+
 // variables used to map each part of the map to the current
 // center of the snake head.
 point_t mappedCenter;
 point_t prevMappedCenter;
 point_t mappedBodyCenter;
+point_t prevMappedBodyCenter;
 
 // left border init ----------------------------------------
 point_t startPointLeft;             point_t endPointLeft;
@@ -210,8 +216,8 @@ void game3_refreshFood()
         if ( food->center.x == game3_HostToClient.client.kill_food_center.x
                 && food->center.y == game3_HostToClient.client.kill_food_center.y )
         {
-            food->center.x = rand() % SN_MAP_MAX_X + 1;
-            food->center.y = rand() % SN_MAP_MAX_Y + 1;
+            food->center.x = rand() % (SN_MAP_MAX_X + SN_FOOD_SIZE/2 + 1);
+            food->center.y = rand() % (SN_MAP_MAX_Y + SN_FOOD_SIZE/2 + 1);
             food->kill = false;
             food->alive = true;
             break;  // only one piece of food can be eaten at a time
@@ -569,7 +575,41 @@ void game3_updateBorders()
  */
 void game3_JoinGame()
 {
+    // 1. Set initial SpecificPlayerInfo_t strict attributes ( getLocalIP() ).
+    game3_ClientToHost.IP_address = getLocalIP();
+    game3_ClientToHost.acknowledge = false;
+    game3_ClientToHost.joined = false;
+    game3_ClientToHost.playerNumber = 1;
 
+    common_buttons_init();
+
+    BLUE_OFF;
+
+    // wait for the host to receive message and notify
+    // client that they joined the game.
+    do
+    {
+        SendData(       (uint8_t*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );   // start handshake
+        ReceiveData(    (uint8_t*)&game3_HostToClient, sizeof(game3_HostToClient) );   // check if host acknowledges
+    } while( game3_HostToClient.client.joined == false );
+
+    // 4. Acknowledge client to tell them they have received
+    // the message about joining the game and the game can begin.
+    game3_ClientToHost.acknowledge = true;
+    SendData( (uint8_t*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );
+
+    // 4. If you've joined the game, acknowledge you've joined to the host
+    //      and show connection through LED.
+    BLUE_ON;
+
+    // 5. Initialize board state, semaphores, and add the following threads..
+    //      ReadJoystickClient, SendDataToHost, ReceiveDataFromHost, DrawObjects,
+    //      MoveLEDs, Idle
+    game3_InitBoardState();
+    game3_addClientThreads();
+
+    // 6. Kill self.
+    G8RTOS_KillSelf();
 }
 
 /*
@@ -615,11 +655,13 @@ void game3_CreateGame()
 {
     srand( time(NULL) );
     LCD_Clear(LCD_GREEN);
-    LCD_Text(8*10, 16*10, "Connecting to SNAKE clients..", LCD_WHITE);
+    LCD_Text(8*8, 16*6, "Connecting to SNAKE clients..", LCD_WHITE);
 
     G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
     G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
     G8RTOS_InitSemaphore(&LCDREADY, 1);
+
+    common_buttons_init();
 
     // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
     // left border init ----------------------------------------
@@ -638,6 +680,9 @@ void game3_CreateGame()
     startPointBottom.x = SN_MAP_MIN_X;    startPointBottom.y = SN_MAP_MAX_Y;
     endPointBottom.x = SN_MAP_MAX_X;      endPointBottom.y = SN_MAP_MAX_Y;
 
+    do_delete = false;
+    do_draw = false;
+
     // packet initializations
     // Initialize the game number and previous game number to -1 so they
     // are INVALID game numbers so they will write on the first valid game number,
@@ -653,8 +698,8 @@ void game3_CreateGame()
         game3_HostToClient.players[i].animation_count = 0;
 
         // UPDATE THIS TO BE RANDOM
-        game3_HostToClient.players[i].center.x = SN_SNAKE_SIZE * (rand() % (SN_MAP_MAX_X/SN_SNAKE_SIZE)) + SN_MAP_MIN_X;
-        game3_HostToClient.players[i].center.y = SN_SNAKE_SIZE * (rand() % (SN_MAP_MAX_Y/SN_SNAKE_SIZE)) + SN_MAP_MIN_Y;
+        game3_HostToClient.players[i].center.x = SN_SNAKE_SIZE * (rand() % ((SN_MAP_MAX_X + 1)/SN_SNAKE_SIZE)) + SN_MAP_MIN_X ;
+        game3_HostToClient.players[i].center.y = SN_SNAKE_SIZE * (rand() % ((SN_MAP_MAX_Y + 1)/SN_SNAKE_SIZE)) + SN_MAP_MIN_Y ;
 
         // Initialize previous center data to be different than the current center
         // so the borders are initialized approximately correct
@@ -747,20 +792,19 @@ void game3_CreateGame()
     // PUT THIS IN A LOOP LATER ***************************************************
     // HANDSHAKE HERE ----------------------------------------------
     // 3. Try to receive packet from the client until return SUCCESS
-    while( ReceiveData((_u8*)&packet_HostToClient.client, sizeof(packet_HostToClient.client)) < 0 );
+    while( ReceiveData((_u8*)&game3_HostToClient.client, sizeof(game3_HostToClient.client)) < 0 );
 
     // 4. Acknowledge client to tell them they joined the game.
-    packet_HostToClient.client.joined = true;
-    packet_HostToClient.client.playerNumber = numPlayers;
-    numPlayers++;
-    SendData( (_u8*)&packet_HostToClient, packet_HostToClient.client.IP_address, sizeof(packet_HostToClient) );
+    game3_HostToClient.client.joined = true;
+    game3_HostToClient.client.playerNumber = numPlayers;
+    SendData( (_u8*)&game3_HostToClient, game3_HostToClient.client.IP_address, sizeof(game3_HostToClient) );
 
     // Wait for client to sync with host by acknowledging that
     // it received the host message.
     do
     {
-        ReceiveData((uint8_t*)&packet_HostToClient.client, sizeof(packet_HostToClient.client));
-    } while ( packet_HostToClient.client.acknowledge == false );
+        ReceiveData((uint8_t*)&game3_HostToClient.client, sizeof(game3_HostToClient.client));
+    } while ( game3_HostToClient.client.acknowledge == false );
     // HANDSHAKE HERE -----------------------------------------------
 #endif
 
@@ -823,21 +867,21 @@ void game3_UpdateGamestateHost()
             me->center.y += offsetY * SN_SNAKE_SIZE;
 
             // Map boundaries to make sure the player does not travel too far
-            if ( me->center.x >= SN_MAP_MAX_X - SN_SNAKE_SIZE / 2 )
+            if ( me->center.x >= SN_MAP_MAX_X) // - SN_SNAKE_SIZE / 2)
             {
-                me->center.x = SN_MAP_MAX_X - SN_SNAKE_SIZE / 2;
+                me->center.x = SN_MAP_MAX_X; // - SN_SNAKE_SIZE / 2;
             }
-            else if ( me->center.x <= SN_SNAKE_SIZE / 2 )
+            else if ( me->center.x <= SN_MAP_MIN_X ) //SN_SNAKE_SIZE / 2)
             {
-                me->center.x = SN_SNAKE_SIZE / 2;
+                me->center.x = SN_MAP_MIN_X; //SN_SNAKE_SIZE / 2;
             }
-            if ( me->center.y >= SN_MAP_MAX_Y - SN_SNAKE_SIZE / 2 )
+            if ( me->center.y >= SN_MAP_MAX_Y ) // - SN_SNAKE_SIZE / 2)
             {
-                me->center.y = SN_MAP_MAX_Y - SN_SNAKE_SIZE / 2;
+                me->center.y = SN_MAP_MAX_Y; // - SN_SNAKE_SIZE / 2;
             }
-            else if ( me->center.y <= SN_SNAKE_SIZE / 2 )
+            else if ( me->center.y <= SN_MAP_MIN_Y ) // SN_SNAKE_SIZE / 2)
             {
-                me->center.y = SN_SNAKE_SIZE / 2;
+                me->center.y = SN_MAP_MIN_Y; // SN_SNAKE_SIZE / 2;
             }
 
             // DEBUGGGGGGGGGGGG ****************************************************
@@ -1003,48 +1047,49 @@ void game3_DrawObjects()
 
                         // update each part of the snake's body relative
                         // to the current snake head
-                        bool save_cpu = true;
                         for (int j = 0; j < game3_snakeLength(i); j++)
                         {
+                            // always skip the head
+                            if ( j == 0 )
+                                continue;
+
                             // erase the previous snake body information
                             // if the player has moved
                             snakeBodyCenter = game3_snakeAt(j, i);
-                            mapObjectToPrev(0, &snakeBodyCenter, &mappedBodyCenter);
+                            mapObjectToPrev(0, &snakeBodyCenter, &prevMappedBodyCenter);
 
-                            // // If the player is pointing the same direction that
-                            // // it was previously, determine if the squares need to be
-                            // // redrawn. Else redraw ALL blocks.
-                            // // NOTE: SAVE_CPU variable is used to stop trying ot save cpu
-                            // // time when the analysis has found that the snake made its first
-                            // // turn.
-                            // if ( me->dir == my_prev->dir && save_cpu == true )
+                            // draw the new snake body information if the player
+                            mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
+
+                            // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
+                            // ************************************************
+                            do_delete = true;
+                            do_draw = true;
+
+                            // read the currently mapped LCD value..
+                            // if the color matches the player color, do not
+                            // erase OR redraw
+                            // if ( player->dir == LEFT )
                             // {
-                            //     // if the directions were UP or DOWN, do NOT redraw
-                            //     // the block if the x coordinates matched.
-                            //     if ( me->dir == UP || me->dir == DOWN )
+                            //     if ( LCD_GetPoint(mappedBodyCenter.x, mappedBodyCenter.y) == color)
                             //     {
-                            //         if ( snakeBodyCenter.x == me->center.x )
-                            //             continue;
-                            //         else
-                            //             save_cpu = false;
-                            //     }
+                            //         do_draw = false;
                             //
-                            //     // if the directions were LEFT or RIGHT, do NOT redraw
-                            //     // the block if the y coordinates matched.
-                            //     else if ( me->dir == LEFT || me->dir == RIGHT )
-                            //     {
-                            //         if ( snakeBodyCenter.y == me->center.y )
-                            //             continue;
-                            //         else
-                            //             save_cpu = false;
+                            //         if ( game3_compAt(j, i, PREV, Y) )
+                            //             do_delete = false;
                             //     }
                             // }
 
+                            // Read the mapped center value
+                            // ************************************************
+                            // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
+
                             // Only erase the snake body if the center data is
                             // valid information ( NOT -500, -500 )
-                            if ( withinPlayerRange(&mappedBodyCenter)
-                                    && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y)
-                                    && snakeBodyCenter.x != -500 && snakeBodyCenter.y != -500)
+                            if ( withinPlayerRange(&prevMappedBodyCenter)
+                                    && !(mappedCenter.x == prevMappedBodyCenter.x && mappedCenter.y == prevMappedBodyCenter.y)
+                                    && snakeBodyCenter.x != -500 && snakeBodyCenter.y != -500
+                                    && do_delete == true )
                             {
                                 int16_t delete_color = SN_BG_COLOR;
 
@@ -1053,41 +1098,51 @@ void game3_DrawObjects()
                                 // white instead of black.
 
                                 // CHECKING LEFT BORDER ----------------------
-                                if ( snakeBodyCenter.x <= SN_MAP_MIN_X + SN_SNAKE_SIZE / 2
+                                if ( snakeBodyCenter.x <= SN_MAP_MIN_X // + SN_SNAKE_SIZE / 2 + 1
                                         && player->dir == LEFT )
                                     delete_color = LCD_BLACK;
 
                                 // CHECKING RIGHT BORDER ---------------------
-                                else if ( snakeBodyCenter.x >= SN_MAP_MAX_X - 1 - SN_SNAKE_SIZE / 2
+                                else if ( snakeBodyCenter.x >= SN_MAP_MAX_X // - 1 - SN_SNAKE_SIZE / 2
                                         && player->dir == RIGHT)
                                     delete_color = LCD_BLACK;
 
                                 // CHECKING TOP BORDER -----------------------
-                                else if ( snakeBodyCenter.y <= SN_MAP_MIN_Y + SN_SNAKE_SIZE / 2
+                                else if ( snakeBodyCenter.y <= SN_MAP_MIN_Y // + SN_SNAKE_SIZE / 2 + 1
                                         && player->dir == UP)
                                     delete_color = LCD_BLACK;
 
                                 // CHECKING BOTTOM BORDER --------------------
-                                else if ( snakeBodyCenter.y >= SN_MAP_MAX_Y - 1 - SN_SNAKE_SIZE / 2
+                                else if ( snakeBodyCenter.y >= SN_MAP_MAX_Y // - 1 - SN_SNAKE_SIZE / 2
                                         && player->dir == DOWN)
                                     delete_color = LCD_BLACK;
 
                                 G8RTOS_WaitSemaphore(&LCDREADY);
-                                LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
-                                                  mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
-                                                  mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
-                                                  mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
+                                LCD_DrawRectangle(prevMappedBodyCenter.x - SN_SNAKE_SIZE / 2,
+                                                  prevMappedBodyCenter.x + SN_SNAKE_SIZE / 2,
+                                                  prevMappedBodyCenter.y - SN_SNAKE_SIZE / 2,
+                                                  prevMappedBodyCenter.y + SN_SNAKE_SIZE / 2,
                                                   delete_color);
                                 G8RTOS_SignalSemaphore(&LCDREADY);
                             }
 
-                            // draw the new snake body information if the player
-                            mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
+                            /*
+                            // DEBUGGING *********
+                            if ( j == 1 )
+                                color = LCD_RED;
+                            else if ( j == 2 )
+                                color = LCD_PURPLE;
+                            else if ( j == 3 )
+                                color = LCD_BLUE;
+                            else if ( j == 4 )
+                                color = LCD_PINK;
+                            // DEBUGGING **********
+                             */
 
                             if ( withinPlayerRange(&mappedBodyCenter)
-                                    && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y) )
+                                    // && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y)
+                                    && do_draw == true )
                             {
-
                                 G8RTOS_WaitSemaphore(&LCDREADY);
                                 LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
                                                   mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
@@ -1222,6 +1277,6 @@ void game3_DrawObjects()
         // reassign the local player's center to be used in border updates next cycle
         // my_prev->center = me->center;
 
-        sleep(20);
+        sleep(10);
     }
 }

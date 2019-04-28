@@ -50,11 +50,11 @@ extern semaphore_t CENTER_SEMAPHORE;
 
 #define SN_SNAKE_SIZE       SN_FOOD_SIZE
 
-#define SN_MAP_MAX_X        1 * MAX_SCREEN_X
-#define SN_MAP_MIN_X        0
+#define SN_MAP_MAX_X        1 * (MAX_SCREEN_X) + SN_SNAKE_SIZE / 2
+#define SN_MAP_MIN_X        0 + SN_SNAKE_SIZE / 2
 #define SN_MAP_CENTER_X     SN_MAP_MAX_X / 2
-#define SN_MAP_MAX_Y        1 * MAX_SCREEN_Y
-#define SN_MAP_MIN_Y        0
+#define SN_MAP_MAX_Y        1 * (MAX_SCREEN_Y) + SN_SNAKE_SIZE / 2
+#define SN_MAP_MIN_Y        0 + SN_SNAKE_SIZE / 2
 #define SN_MAP_CENTER_Y     SN_MAP_MAX_Y / 2
 
 #define SN_BG_COLOR         LCD_WHITE
