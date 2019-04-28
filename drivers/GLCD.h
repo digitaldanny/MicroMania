@@ -199,6 +199,9 @@ void PutChar( uint16_t Xpos, uint16_t Ypos, uint8_t ASCI, uint16_t charColor); /
 void LCD_Text(uint16_t Xpos, uint16_t Ypos, uint8_t *str,uint16_t Color); //, uint16_t bkColor);
 void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, uint16_t Color);
 void LCD_fillCircle(int poX, int poY, int r,uint16_t color);
+uint16_t LCD_Read (void);
+uint16_t LCD_ReadData(void);
+uint16_t LCD_GetPoint(uint16_t Xpos,uint16_t Ypos);
 #endif 
 
 /*********************************************************************************************************

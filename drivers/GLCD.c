@@ -424,10 +424,17 @@ unsigned short LCD_BGR2RGB( unsigned short color )
 *******************************************************************************/
 void LCD_SetPoint(uint16_t Xpos,uint16_t Ypos,uint16_t point)
 {
+    // SET ALLOWABLE ADDRESS WINDOW
+    LCD_WriteReg(HOR_ADDR_START_POS,    Ypos  );   /* Horizontal GRAM Start Address    */
+    LCD_WriteReg(HOR_ADDR_END_POS,      Ypos  );   /* Horizontal GRAM End Address      */
+    LCD_WriteReg(VERT_ADDR_START_POS,   Xpos  );   /* Vertical GRAM Start Address      */
+    LCD_WriteReg(VERT_ADDR_END_POS,     Xpos  );   /* Vertical GRAM Start Address      */
+
     if( Xpos >= MAX_X || Ypos >= MAX_Y )
     {
         return;
     }
+
     LCD_SetCursor(Xpos,Ypos);
     LCD_WriteReg(0x0022,point);
 }
@@ -645,6 +652,138 @@ void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEn
         //}
         BITBAND_PERI(P10->OUT,  1) = 1;   /* Wr high */
     }
+}
+
+/*******************************************************************************
+* Function Name  : LCD_Read
+* Description    : LCD read data
+* Input          : - byte: byte to be read
+* Output         : None
+* Return         : return data
+* Attention      : None
+*******************************************************************************/
+uint16_t LCD_Read (void)
+{
+    // uint32_t low = 0;
+    // uint32_t high = 0;
+    uint32_t readMe = 0;
+
+    // change direction for pins to input
+    // P10->DIR    &= ~0x12;
+    P6->DIR     &= ~0x0C;
+    P7->DIR     &= ~0x09; // ~0x0F; // don't include RD + RS as inputs
+    P8->DIR     &= ~0xFC;
+    P9->DIR     &= ~0x6F;
+
+    // LPC_GPIO2->FIODIR &= ~(0x000000FF);             /* P2.0...P2.7   Input DB[0..7] */
+    // LPC_GPIO0->FIODIR &= ~(0x007F8000);         /* P0.15...P0.22 Input DB[8..15]*/
+
+    // // read in the low byte
+    // low  = LPC_GPIO2->FIOPIN & 0x000000ff;          /* Read D0..D7 */
+    //
+    // // read in the high byte
+    // high = LPC_GPIO0->FIOPIN & 0x007f8000;          /* Read D8..D15 */
+
+    // read in the low byte of the data
+    readMe |= ((P8->IN >> 2) & 0x1) << 0;   /* Read D0..D7 */
+    readMe |= ((P8->IN >> 3) & 0x1) << 1;   /* Read D0..D7 */
+    readMe |= ((P8->IN >> 4) & 0x1) << 2;   /* Read D0..D7 */
+    readMe |= ((P8->IN >> 5) & 0x1) << 3;   /* Read D0..D7 */
+    readMe |= ((P8->IN >> 6) & 0x1) << 4;   /* Read D0..D7 */
+    readMe |= ((P8->IN >> 7) & 0x1) << 5;   /* Read D0..D7 */
+    readMe |= ((P9->IN >> 0) & 0x1) << 6;   /* Read D0..D7 */
+    readMe |= ((P9->IN >> 1) & 0x1) << 7;   /* Read D0..D7 */
+
+    // BITBAND_PERI(P8->OUT,  2) = (temp & 0x00000001) >> 0 ;        /* Write D0..D7 */
+    // BITBAND_PERI(P8->OUT,  3) = (temp & 0x00000002) >> 1 ;        /* Write D0..D7 */
+    // BITBAND_PERI(P8->OUT,  4) = (temp & 0x00000004) >> 2 ;        /* Write D0..D7 */
+    // BITBAND_PERI(P8->OUT,  5) = (temp & 0x00000008) >> 3 ;        /* Write D0..D7 */
+    // BITBAND_PERI(P8->OUT,  6) = (temp & 0x00000010) >> 4 ;        /* Write D0..D7 */
+    // BITBAND_PERI(P8->OUT,  7) = (temp & 0x00000020) >> 5 ;        /* Write D0..D7 */
+    // BITBAND_PERI(P9->OUT,  0) = (temp & 0x00000040) >> 6 ;        /* Write D0..D7 */
+    // BITBAND_PERI(P9->OUT,  1) = (temp & 0x00000080) >> 7 ;        /* Write D0..D7 */
+
+    readMe |= ((P9->IN >> 2) & 0x1) << 8;
+    readMe |= ((P9->IN >> 3) & 0x1) << 9;
+    readMe |= ((P6->IN >> 2) & 0x1) << 10;
+    readMe |= ((P6->IN >> 3) & 0x1) << 11;
+    readMe |= ((P7->IN >> 0) & 0x1) << 12;
+    readMe |= ((P7->IN >> 3) & 0x1) << 13;
+    readMe |= ((P9->IN >> 5) & 0x1) << 14;
+    readMe |= ((P9->IN >> 6) & 0x1) << 15;
+
+    // BITBAND_PERI(P9->OUT,  2) = (temp & 0x00000100) >> 8 ;  /* Read D8..D15 */
+    // BITBAND_PERI(P9->OUT,  3) = (temp & 0x00000200) >> 9 ;  /* Read D8..D15 */
+    // BITBAND_PERI(P6->OUT,  2) = (temp & 0x00000400) >> 10 ; /* Read D8..D15 */
+    // BITBAND_PERI(P6->OUT,  3) = (temp & 0x00000800) >> 11 ; /* Read D8..D15 */
+    // BITBAND_PERI(P7->OUT,  0) = (temp & 0x00001000) >> 12 ; /* Read D8..D15 */
+    // BITBAND_PERI(P7->OUT,  3) = (temp & 0x00002000) >> 13 ; /* Read D8..D15 */
+    // BITBAND_PERI(P9->OUT,  5) = (temp & 0x00004000) >> 14 ; /* Read D8..D15 */
+    // BITBAND_PERI(P9->OUT,  6) = (temp & 0x00008000) >> 15 ; /* Read D8..D15 */
+
+    // low |= (high >> 7);
+
+    // change direction for pins to output
+    P10->DIR = 0x12;
+    P6->DIR = 0x0C;
+    P7->DIR = 0x0F;
+    P8->DIR = 0xFC;
+    P9->DIR = 0x6F;
+
+    // LPC_GPIO2->FIODIR |= 0x000000FF;                /* P2.0...P2.7   Output DB[0..7] */
+    // LPC_GPIO0->FIODIR |= 0x007F8000;        /* P0.15...P0.22 Output DB[8..15]*/
+
+    return readMe;
+}
+
+/*******************************************************************************
+* Function Name  : LCD_ReadData
+* Description    : LCD read data
+* Input          : None
+* Output         : None
+* Return         : return data
+* Attention      : None
+*******************************************************************************/
+uint16_t LCD_ReadData(void)
+{
+    uint16_t value;
+
+    BITBAND_PERI(P7->OUT,  2) = 1;   /* RS high */
+    BITBAND_PERI(P10->OUT,  1) = 1;   /* Wr high */
+    BITBAND_PERI(P7->OUT,  1) = 0;   /* Rd low */
+
+        /* read data */
+    value = LCD_Read();
+
+    BITBAND_PERI(P7->OUT,  1) = 1;   /* Rd high */
+
+    return value;
+}
+
+/******************************************************************************
+* Function Name  : LCD_GetPoint
+* Description    : Get the color value of the specified coordinates
+* Input          : - Xpos: Row Coordinate
+*                  - Xpos: Line Coordinate
+* Output         : None
+* Return         : Screen Color
+* Attention  : None
+*******************************************************************************/
+uint16_t LCD_GetPoint(uint16_t Xpos,uint16_t Ypos)
+{
+    uint16_t dummy;
+
+    LCD_WriteReg(HOR_ADDR_START_POS,    Ypos  );   /* Horizontal GRAM Start Address    */
+    LCD_WriteReg(HOR_ADDR_END_POS,      Ypos  );   /* Horizontal GRAM End Address      */
+    LCD_WriteReg(VERT_ADDR_START_POS,   Xpos  );   /* Vertical GRAM Start Address      */
+    LCD_WriteReg(VERT_ADDR_END_POS,     Xpos  );   /* Vertical GRAM Start Address      */
+
+    LCD_SetCursor(Xpos,Ypos);
+    LCD_WriteIndex(0x0022);
+
+    dummy = LCD_ReadData();   /* Empty read */
+    dummy = LCD_ReadData();
+    return  dummy; //LCD_BGR2RGB( dummy );
 }
 
 /*********************************************************************************************************
