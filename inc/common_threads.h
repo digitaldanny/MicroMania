@@ -22,7 +22,7 @@
 #define JOYSTICK_BIAS_X     500
 #define JOYSTICK_BIAS_Y     350
 
-#define MAX_NUM_PLAYERS     3
+#define MAX_NUM_PLAYERS     2
 
 typedef enum
 {
