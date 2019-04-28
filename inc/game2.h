@@ -13,18 +13,18 @@
 #include "common_threads.h"
 /*********************************************** Includes ********************************************************************/
 #define DEFAULT_PRIORITY    15
-#define MAX_NUM_OF_BALLS 10
+#define MAX_NUM_OF_BALLS 15
 #define MAX_NUM_OF_PLAYERS 2
 #define MAX_NUM_OF_SHROOMS 1
 #define BALL_SIZE 3
-#define SHROOM_SIZE 16
+#define SHROOM_SIZE 12
 #define ARENA_MAX_X 320
 #define ARENA_MAX_Y 240
 #define ARENA_MIN_X 0
 #define ARENA_MIN_Y 20
 /* Maximum ball speed */
-#define MAX_BALL_SPEED               3
-#define MIN_BALL_SPEED               1
+#define MAX_BALL_SPEED               8
+#define MIN_BALL_SPEED               2
 #define MAX_SHROOM_SPEED               3
 #define MIN_SHROOM_SPEED               1
 #define SHROOM_SLEEP_COUNT              5000
@@ -71,6 +71,7 @@ typedef struct
     uint16_t num_lives;
     uint16_t RunTime;
     uint16_t color;
+    bool kill;
 } Game2_GeneralPlayerInfo_t;
 /*
  * Struct of all the balls, only changed by the host
