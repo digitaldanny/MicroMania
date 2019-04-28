@@ -14,7 +14,7 @@
 /*********************************************** Includes ********************************************************************/
 #define DEFAULT_PRIORITY    15
 #define MAX_NUM_OF_BALLS 10
-#define MAX_NUM_OF_PLAYERS 1
+#define MAX_NUM_OF_PLAYERS 2
 #define MAX_NUM_OF_SHROOMS 1
 #define BALL_SIZE 3
 #define SHROOM_SIZE 16
