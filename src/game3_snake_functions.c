@@ -37,23 +37,39 @@ static snake_t * head;
 static snake_t * tail;
 static snake_t * body;
 static int8_t * size;
+static snake_t * prev_head;
+static snake_t * prev_tail;
+static snake_t * prev_body;
+static int8_t * prev_size;
 
 snake_t snake_pl0[SN_SNAKE_MAX_LENGTH];
 snake_t snake_pl1[SN_SNAKE_MAX_LENGTH];
 snake_t snake_pl2[SN_SNAKE_MAX_LENGTH];
+snake_t prev_snake_pl0[SN_SNAKE_MAX_LENGTH];
+snake_t prev_snake_pl1[SN_SNAKE_MAX_LENGTH];
+snake_t prev_snake_pl2[SN_SNAKE_MAX_LENGTH];
 
 int8_t snake_pl0_size;
 int8_t snake_pl1_size;
 int8_t snake_pl2_size;
+int8_t prev_snake_pl0_size;
+int8_t prev_snake_pl1_size;
+int8_t prev_snake_pl2_size;
 
 snake_t * snake_pl0_head;
 snake_t * snake_pl0_tail;
+snake_t * prev_snake_pl0_head;
+snake_t * prev_snake_pl0_tail;
 
 snake_t * snake_pl1_head;
 snake_t * snake_pl1_tail;
+snake_t * prev_snake_pl1_head;
+snake_t * prev_snake_pl1_tail;
 
 snake_t * snake_pl2_head;
 snake_t * snake_pl2_tail;
+snake_t * prev_snake_pl2_head;
+snake_t * prev_snake_pl2_tail;
 
 // HELPER FUNCTIONS --------------------
 // This function will point the head, tail, and
@@ -62,21 +78,21 @@ void game3_assignPointers(int8_t player_num)
 {
     if ( player_num == 0 )
     {
-        head = snake_pl0_head;
-        tail = snake_pl0_tail;
-        size = &snake_pl0_size;
+        head = snake_pl0_head;      prev_head = prev_snake_pl0_head;
+        tail = snake_pl0_tail;      prev_tail = prev_snake_pl0_tail;
+        size = &snake_pl0_size;     prev_size = &prev_snake_pl0_size;
     }
     else if ( player_num == 1 )
     {
-        head = snake_pl1_head;
-        tail = snake_pl1_tail;
-        size = &snake_pl1_size;
+        head = snake_pl1_head;      prev_head = prev_snake_pl1_head;
+        tail = snake_pl1_tail;      prev_tail = prev_snake_pl1_tail;
+        size = &snake_pl1_size;     prev_size = &prev_snake_pl1_size;
     }
     else if ( player_num == 2 )
     {
-        head = snake_pl2_head;
-        tail = snake_pl2_tail;
-        size = &snake_pl2_size;
+        head = snake_pl2_head;      prev_head = prev_snake_pl2_head;
+        tail = snake_pl2_tail;      prev_tail = prev_snake_pl2_tail;
+        size = &snake_pl2_size;     prev_size = &prev_snake_pl2_size;
     }
 }
 
@@ -122,62 +138,62 @@ void game3_initSnake(point_t * head_and_tail, int8_t player_num)
     {
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
-            body = &snake_pl0[i];
-            snake_pl0_size = 1;
+            body = &snake_pl0[i];           prev_body = &snake_pl0[i];
+            snake_pl0_size = 1;             prev_snake_pl0_size = 1;
 
-            body->alive = false;
-            body->center.x = -500;
-            body->center.y = -500;
-            body->next = NULL;
-            body->next = NULL;
+            body->alive = false;            prev_body->alive = false;
+            body->center.x = -500;          prev_body->center.x = -500;
+            body->center.y = -500;          prev_body->center.y = -500;
+            body->next = NULL;              prev_body->next = NULL;
+            body->next = NULL;              prev_body->next = NULL;
         }
 
-        snake_pl0_head = &snake_pl0[0];
-        snake_pl0_tail = snake_pl0_head;
+        snake_pl0_head = &snake_pl0[0];     prev_snake_pl0_head = &prev_snake_pl0[0];
+        snake_pl0_tail = snake_pl0_head;    prev_snake_pl0_tail = prev_snake_pl0_head;
     }
     else if ( player_num == 1 )
     {
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
-            body = &snake_pl1[i];
-            snake_pl1_size = 1;
+            body = &snake_pl1[i];           prev_body = &snake_pl1[i];
+            snake_pl1_size = 1;             prev_snake_pl1_size = 1;
 
-            body->alive = false;
-            body->center.x = -500;
-            body->center.y = -500;
-            body->next = NULL;
-            body->next = NULL;
+            body->alive = false;            prev_body->alive = false;
+            body->center.x = -500;          prev_body->center.x = -500;
+            body->center.y = -500;          prev_body->center.y = -500;
+            body->next = NULL;              prev_body->next = NULL;
+            body->next = NULL;              prev_body->next = NULL;
         }
 
-        snake_pl1_head = &snake_pl1[0];
-        snake_pl1_tail = snake_pl1_head;
+        snake_pl1_head = &snake_pl1[0];     prev_snake_pl1_head = &prev_snake_pl1[0];
+        snake_pl1_tail = snake_pl1_head;    prev_snake_pl1_tail = prev_snake_pl1_head;
     }
     else
     {
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
-            body = &snake_pl2[i];
-            snake_pl2_size = 1;
+            body = &snake_pl2[i];           prev_body = &snake_pl2[i];
+            snake_pl2_size = 1;             prev_snake_pl2_size = 1;
 
-            body->alive = false;
-            body->center.x = -500;
-            body->center.y = -500;
-            body->next = NULL;
-            body->next = NULL;
+            body->alive = false;            prev_body->alive = false;
+            body->center.x = -500;          prev_body->center.x = -500;
+            body->center.y = -500;          prev_body->center.y = -500;
+            body->next = NULL;              prev_body->next = NULL;
+            body->next = NULL;              prev_body->next = NULL;
         }
 
-        snake_pl2_head = &snake_pl2[0];
-        snake_pl2_tail = snake_pl2_head;
+        snake_pl2_head = &snake_pl2[0];     prev_snake_pl2_head = &prev_snake_pl2[0];
+        snake_pl2_tail = snake_pl2_head;    prev_snake_pl2_tail = prev_snake_pl2_head;
     }
 
     // set up the pointers correctly first
     game3_assignPointers( player_num );
 
     // then assign the new head, tail, next and previous
-    head->alive = true;
-    head->center = *head_and_tail;
-    head->next = head;
-    head->prev = head;
+    head->alive = true;                     prev_head->alive = true;
+    head->center = *head_and_tail;          prev_head->center = *head_and_tail;
+    head->next = head;                      prev_head->next = prev_head;
+    head->prev = head;                      prev_head->prev = prev_head;
 }
 
 // This function will adjust the head pointer

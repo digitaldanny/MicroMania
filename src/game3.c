@@ -1,4 +1,4 @@
-#define SINGLE
+#define MULTI
 
 /*
  *  menu.c
@@ -11,6 +11,11 @@
  *  4/20/2019   : Snake head draws and map movement added
  *  4/24/2019   : Map movement stabilized and added boundaries to the map
  *  4/25/2019   : Added snake head animation drawing
+ *  4/26/2019   : Block borders to map with clean erasing for snake at edges
+ *  4/27/2019   : Snake linked list added so snake can grow and shrink
+ *  4/28/2019   : Snake offset at border fixed. Clean erase bug fixed.
+ *                Food eating mechanic and sending new food coordinates to
+ *                clients.
  *
  *  DESCRIPTION : SLITHER.IO
  *
@@ -87,8 +92,10 @@ void game3_InitBoardState()
     point_t mappedCenter;
     uint16_t color;
 
+    LCD_Clear(SN_BG_COLOR);
+
     // Draw all the players on the map that are alive
-    for (int i = 0; i < game3_numPlayers; i++)
+    for (int i = 0; i < MAX_NUM_PLAYERS; i++)
     {
 
         player = &game3_HostToClient.players[i];
@@ -274,7 +281,8 @@ void mapObjectToPrev(int8_t num, point_t * objectCenter, point_t * mappedCenter)
 }
 
 // This function draws the snake head animation with an increment value
-// that should be sent between gamestates
+// that should be sent between gamestates. This function will only redraw
+// for every frame if drawing for the enemy player.
 void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t count, int16_t color)
 {
     int16_t eyeX_left;
@@ -289,9 +297,11 @@ void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t 
 
     int16_t frameNum = 0;
 
+    bool isMe = x == MAX_SCREEN_X / 2 && y == MAX_SCREEN_Y / 2;
+
     // only redraw the snake image if the direction has changed
-    // or if the animation needs to play
-    if ( prevDir != dir || !(count > 0 && count < SN_SNAKE_FRAME_1) )
+    // OR if the animation needs to play OR if drawing an enemy player
+    if ( prevDir != dir || !(count > 0 && count < SN_SNAKE_FRAME_1) || !isMe )
     {
         // Base box
         LCD_DrawRectangle(x - SN_SNAKE_SIZE / 2,
@@ -581,7 +591,46 @@ void game3_JoinGame()
     game3_ClientToHost.joined = false;
     game3_ClientToHost.playerNumber = 1;
 
+    srand( time(NULL) );
+    LCD_Clear(LCD_GREEN);
+    LCD_Text(8*6, 16*6, "Connecting to SLITHER host..", LCD_WHITE);
+
+    G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
+    G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
+    G8RTOS_InitSemaphore(&LCDREADY, 1);
+
     common_buttons_init();
+
+    // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
+    // left border init ----------------------------------------
+    startPointLeft.x = SN_MAP_MIN_X;    startPointLeft.y = SN_MAP_MIN_Y;
+    endPointLeft.x = SN_MAP_MIN_X;      endPointLeft.y = SN_MAP_MAX_Y;
+
+    // right border init ----------------------------------------
+    startPointRight.x = SN_MAP_MAX_X;    startPointRight.y = SN_MAP_MIN_Y;
+    endPointRight.x = SN_MAP_MAX_X;      endPointRight.y = SN_MAP_MAX_Y;
+
+    // top border init ----------------------------------------
+    startPointTop.x = SN_MAP_MIN_X;    startPointTop.y = SN_MAP_MIN_Y;
+    endPointTop.x = SN_MAP_MAX_X;      endPointTop.y = SN_MAP_MIN_Y;
+
+    // bottom border init ----------------------------------------
+    startPointBottom.x = SN_MAP_MIN_X;    startPointBottom.y = SN_MAP_MAX_Y;
+    endPointBottom.x = SN_MAP_MAX_X;      endPointBottom.y = SN_MAP_MAX_Y;
+
+    do_delete = false;
+    do_draw = false;
+
+    // initialize the snake linked lists locally
+    for (int i = 0; i < MAX_NUM_PLAYERS; i++)
+    {
+        // initialize the snakes for each function
+        game3_initSnake(&game3_HostToClient.players[i].center, i);
+    }
+
+    my_prev = &prevPlayers[1];
+    me = &game3_HostToClient.players[1];    // every player should define its "me" based on gamestate
+    game3_numPlayers++; // counting the host as the first player
 
     BLUE_OFF;
 
@@ -617,7 +666,10 @@ void game3_JoinGame()
  */
 void game3_ReceiveDataFromHost()
 {
-
+    while(1)
+    {
+        sleep(2);
+    }
 }
 
 /*
@@ -625,7 +677,10 @@ void game3_ReceiveDataFromHost()
  */
 void game3_SendDataToHost()
 {
-
+    while(1)
+    {
+        sleep(5);
+    }
 }
 
 /*
@@ -633,7 +688,10 @@ void game3_SendDataToHost()
  */
 void game3_ReadJoystickClient()
 {
-
+    while(1)
+    {
+        sleep(10);
+    }
 }
 
 /*
@@ -665,20 +723,20 @@ void game3_CreateGame()
 
     // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
     // left border init ----------------------------------------
-    startPointLeft.x = SN_MAP_MIN_X;    startPointLeft.y = SN_MAP_MIN_Y;
-    endPointLeft.x = SN_MAP_MIN_X;      endPointLeft.y = SN_MAP_MAX_Y;
+    startPointLeft.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointLeft.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
+    endPointLeft.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;      endPointLeft.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
     // right border init ----------------------------------------
-    startPointRight.x = SN_MAP_MAX_X;    startPointRight.y = SN_MAP_MIN_Y;
-    endPointRight.x = SN_MAP_MAX_X;      endPointRight.y = SN_MAP_MAX_Y;
+    startPointRight.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;    startPointRight.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
+    endPointRight.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointRight.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
     // top border init ----------------------------------------
-    startPointTop.x = SN_MAP_MIN_X;    startPointTop.y = SN_MAP_MIN_Y;
-    endPointTop.x = SN_MAP_MAX_X;      endPointTop.y = SN_MAP_MIN_Y;
+    startPointTop.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointTop.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
+    endPointTop.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointTop.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
 
     // bottom border init ----------------------------------------
-    startPointBottom.x = SN_MAP_MIN_X;    startPointBottom.y = SN_MAP_MAX_Y;
-    endPointBottom.x = SN_MAP_MAX_X;      endPointBottom.y = SN_MAP_MAX_Y;
+    startPointBottom.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
+    endPointBottom.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
     do_delete = false;
     do_draw = false;
@@ -692,7 +750,7 @@ void game3_CreateGame()
 
     for (int i = 0; i < MAX_NUM_PLAYERS; i++)
     {
-        game3_HostToClient.players[i].alive = false;
+        game3_HostToClient.players[i].alive = true;
         game3_HostToClient.players[i].dir = UP;
         game3_HostToClient.players[i].kill = false;
         game3_HostToClient.players[i].animation_count = 0;
@@ -1024,6 +1082,25 @@ void game3_DrawObjects()
             {
                 // Update each player based on their center relative to "me" center
                 mapObjectToMe(&player->center, &mappedCenter);
+                mapObjectToPrev(0, &player->center, &prevMappedCenter);
+
+                // erase player's previous head position, only used for the other
+                // player's snake. If playing as host, the host's head will not ever
+                // be redraw because it is always on the center of the map. The enemy
+                // player's snake head WILL be redrawn because it should always be changing
+                // position.
+                if ( withinPlayerRange(&prevMappedCenter)
+                        && !(player->center.x == me->center.x && player->center.y == me->center.y))
+                {
+                    G8RTOS_WaitSemaphore(&LCDREADY);
+                    LCD_DrawRectangle(prevMappedCenter.x - SN_SNAKE_SIZE / 2,
+                                      prevMappedCenter.x + SN_SNAKE_SIZE / 2,
+                                      prevMappedCenter.y - SN_SNAKE_SIZE / 2,
+                                      prevMappedCenter.y + SN_SNAKE_SIZE / 2,
+                                      LCD_YELLOW); //SN_BG_COLOR);
+                    G8RTOS_SignalSemaphore(&LCDREADY);
+                }
+
                 if ( withinPlayerRange(&mappedCenter) )
                 {
                     // determine the snake color based on the player number
@@ -1164,7 +1241,7 @@ void game3_DrawObjects()
 
             }
 
-            prevPlayers[i].center = player->center; // DEBUG *********
+            prevPlayers[i].center = player->center;
             prevPlayers[i].dir = player->dir;
 
             G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
