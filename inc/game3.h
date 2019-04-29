@@ -19,10 +19,10 @@
 extern semaphore_t CENTER_SEMAPHORE;
 
 // TIMER MACROS ---------------------
-#define SN_UPDATE_PLAYER_POS    10
+#define SN_UPDATE_PLAYER_POS    5
 
 // GAME MACROS ----------------------
-#define SN_MAX_FOOD_ON_MAP      1
+#define SN_MAX_FOOD_ON_MAP      10
 #define SN_FOOD_SIZE            10
 #define SN_FOOD_SPAWN_RANGE     30
 

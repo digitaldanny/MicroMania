@@ -979,7 +979,7 @@ void game3_UpdateGamestateHost()
 
         // CLIENT ADJUSTMENTS --------------------------------
 
-        sleep(10);
+        sleep(15);
     }
 }
 
@@ -1071,9 +1071,9 @@ void game3_DrawObjects()
          * =                                                    =
          * ======================================================
          */
+        G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
         for (int i = 0; i < MAX_NUM_PLAYERS; i++)
         {
-            G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
 
             player = &game3_HostToClient.players[i];
             prevPlayer = &prevPlayers[i];
@@ -1082,13 +1082,14 @@ void game3_DrawObjects()
             {
                 // Update each player based on their center relative to "me" center
                 mapObjectToMe(&player->center, &mappedCenter);
-                mapObjectToPrev(0, &player->center, &prevMappedCenter);
+                mapObjectToPrev(0, &prevPlayer->center, &prevMappedCenter);
 
                 // erase player's previous head position, only used for the other
                 // player's snake. If playing as host, the host's head will not ever
                 // be redraw because it is always on the center of the map. The enemy
                 // player's snake head WILL be redrawn because it should always be changing
                 // position.
+
                 if ( withinPlayerRange(&prevMappedCenter)
                         && !(player->center.x == me->center.x && player->center.y == me->center.y))
                 {
@@ -1097,7 +1098,7 @@ void game3_DrawObjects()
                                       prevMappedCenter.x + SN_SNAKE_SIZE / 2,
                                       prevMappedCenter.y - SN_SNAKE_SIZE / 2,
                                       prevMappedCenter.y + SN_SNAKE_SIZE / 2,
-                                      LCD_YELLOW); //SN_BG_COLOR);
+                                      LCD_YELLOW); // SN_BG_COLOR);
                     G8RTOS_SignalSemaphore(&LCDREADY);
                 }
 
@@ -1243,9 +1244,6 @@ void game3_DrawObjects()
 
             prevPlayers[i].center = player->center;
             prevPlayers[i].dir = player->dir;
-
-            G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
-            sleep(5);
         }
 
         /*
@@ -1351,9 +1349,11 @@ void game3_DrawObjects()
 
         game3_updateBorders();
 
+        G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
+
         // reassign the local player's center to be used in border updates next cycle
         // my_prev->center = me->center;
 
-        sleep(10);
+        sleep(20);
     }
 }
