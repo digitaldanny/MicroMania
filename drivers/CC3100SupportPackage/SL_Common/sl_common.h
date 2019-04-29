@@ -1,4 +1,4 @@
-#define DANNY_HOTSPOT
+#define MATT_HOTSPOT
 
 // PREPROCESSOR DIRECTIVES
 // Configurations dependent on which router the
@@ -85,6 +85,20 @@ extern "C" {
  * Values for below macros shall be modified per the access-point's (AP) properties
  * SimpleLink device will connect to following AP when the application is executed
  */
+#ifdef MATT_HOTSPOT
+#define SSID_NAME       "Kevin"  /* Access point name to connect to. */
+#define SEC_TYPE        SL_SEC_TYPE_WPA_WPA2        /* Security type of the Access piont */
+//#define SEC_TYPE        SL_SEC_TYPE_OPEN          /* Security type of the Access piont */
+#define PASSKEY         "12345678"               /* Password in case of secure AP */
+#define PASSKEY_LEN     pal_Strlen(PASSKEY)         /* Password length in case of secure AP */
+
+/* Configuration of the device when it comes up in AP mode */
+#define SSID_AP_MODE       "Daniel"         /* SSID of the CC3100 in AP mode */
+#define PASSWORD_AP_MODE   "eel4930pass"                      /* Password of CC3100 AP */
+#define SEC_TYPE_AP_MODE   SL_SEC_TYPE_OPEN         /* Can take SL_SEC_TYPE_WEP or
+                                                     * SL_SEC_TYPE_WPA as well */
+#endif
+
 #ifdef DANNY_HOTSPOT
 #define SSID_NAME       "Daniel"  /* Access point name to connect to. */
 #define SEC_TYPE        SL_SEC_TYPE_WPA_WPA2        /* Security type of the Access piont */
