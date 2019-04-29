@@ -210,6 +210,86 @@ void game3_addClientThreads()
     G8RTOS_AddThread(&common_IdleThread, 255, 0xFFFFFFFF, "IDLE");
 }
 
+// This function returns the direction opposite of
+// the direction being input
+dir_t game3_oppositeDir ( dir_t dir )
+{
+    if ( dir == LEFT )          return RIGHT;
+    else if ( dir == RIGHT )    return LEFT;
+    else if ( dir == UP )       return DOWN;
+    else                        return UP;
+}
+
+// This function is used to make sure the deletion color
+// will match the area surrounding it.
+void game3_checkDeleteColor( point_t * center, dir_t * dir, int16_t * color )
+{
+    int16_t reassigned = LCD_BLACK;
+    *color = SN_BG_COLOR;
+
+    // CHECKING LEFT BORDER ----------------------
+    if ( center->x <= SN_MAP_MIN_X // + SN_SNAKE_SIZE / 2 + 1
+            && *dir == LEFT )
+        *color = reassigned;
+
+    // CHECKING RIGHT BORDER ---------------------
+    else if ( center->x >= SN_MAP_MAX_X // - 1 - SN_SNAKE_SIZE / 2
+            && *dir == RIGHT)
+        *color = reassigned;
+
+    // CHECKING TOP BORDER -----------------------
+    else if ( center->y <= SN_MAP_MIN_Y // + SN_SNAKE_SIZE / 2 + 1
+            && *dir == UP)
+        *color = reassigned;
+
+    // CHECKING BOTTOM BORDER --------------------
+    else if ( center->y >= SN_MAP_MAX_Y // - 1 - SN_SNAKE_SIZE / 2
+            && *dir == DOWN)
+        *color = reassigned;
+}
+
+// This function is used to force a player to make a turn
+// if they are attempting to hit a border.
+void game3_forceBorderTurn( point_t * center, int16_t * x_off,
+                            int16_t * y_off, dir_t * dir )
+{
+    // CHECKING LEFT BORDER ----------------------
+    if ( center->x <= SN_MAP_MIN_X // + SN_SNAKE_SIZE / 2 + 1
+            && *dir == LEFT )
+    {
+        *x_off  = 0;
+        *y_off  = -1;
+        *dir = UP;
+    }
+
+    // CHECKING RIGHT BORDER ---------------------
+    else if ( center->x >= SN_MAP_MAX_X // - 1 - SN_SNAKE_SIZE / 2
+            && *dir == RIGHT)
+    {
+        *x_off = 0;
+        *y_off = 1;
+        *dir = DOWN;
+    }
+
+    // CHECKING TOP BORDER -----------------------
+    else if ( center->y <= SN_MAP_MIN_Y // + SN_SNAKE_SIZE / 2 + 1
+            && *dir == UP)
+    {
+        *x_off = -1;
+        *y_off = 0;
+        *dir = RIGHT;
+    }
+
+    // CHECKING BOTTOM BORDER --------------------
+    else if ( center->y >= SN_MAP_MAX_Y // - 1 - SN_SNAKE_SIZE / 2
+            && *dir == DOWN)
+    {
+        *x_off = 1;
+        *y_off = 0;
+        *dir = LEFT;
+    }
+}
+
 // This function loops through all food structures and checks
 // if the food center received is equal to the current food.
 // If yes, generate a new center for that food and set the
@@ -725,6 +805,15 @@ void game3_ReadJoystickClient()
             else               { game3_ClientToHost.dir = UP;   }
         }
 
+        // Handle the override border before sending the requested
+        // direction so the client and host can draw the same thing
+        int16_t dummy1 = 100;
+        int16_t dummy2 = 100;
+        game3_forceBorderTurn(&game3_HostToClient.players[1].center,
+                              &dummy1,
+                              &dummy2,
+                              &game3_ClientToHost.dir);
+
         sleep(10);
     }
 }
@@ -958,6 +1047,10 @@ void game3_UpdateGamestateHost()
                 offsetX = 0;
             }
 
+            // Override the center offsets in case the player is trying to go past the
+            // border.
+            game3_forceBorderTurn(&me->center, &offsetX, &offsetY, &me->dir);
+
             // update the player center by the snake head square size
             me->center.x -= offsetX * SN_SNAKE_SIZE;
             me->center.y += offsetY * SN_SNAKE_SIZE;
@@ -986,6 +1079,9 @@ void game3_UpdateGamestateHost()
             else if ( game3_HostToClient.players[1].dir == RIGHT )  { offsetXClient = -1; offsetYClient = 0;    }
             else if ( game3_HostToClient.players[1].dir == DOWN )   { offsetXClient = 0; offsetYClient = 1;     }
             else                                                    { offsetXClient = 0; offsetYClient = -1;    }
+
+            // Override the center offsets in case the player is trying to go past the
+            // border happens on the client side.
 
             game3_HostToClient.players[1].center.x -= offsetXClient * SN_SNAKE_SIZE;
             game3_HostToClient.players[1].center.y += offsetYClient * SN_SNAKE_SIZE;
@@ -1199,12 +1295,16 @@ void game3_DrawObjects()
                 if ( withinPlayerRange(&prevMappedCenter)
                         && !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
+                    int16_t delete;
+
+                    game3_checkDeleteColor(&player->center, &me->dir, &delete);
+
                     G8RTOS_WaitSemaphore(&LCDREADY);
                     LCD_DrawRectangle(prevMappedCenter.x - SN_SNAKE_SIZE / 2 + x_off * SN_SNAKE_SIZE,
                                       prevMappedCenter.x + SN_SNAKE_SIZE / 2 + x_off * SN_SNAKE_SIZE,
                                       prevMappedCenter.y - SN_SNAKE_SIZE / 2 + y_off * SN_SNAKE_SIZE,
                                       prevMappedCenter.y + SN_SNAKE_SIZE / 2 + y_off * SN_SNAKE_SIZE,
-                                      SN_BG_COLOR);
+                                      delete);
                     G8RTOS_SignalSemaphore(&LCDREADY);
                 }
 
@@ -1275,31 +1375,9 @@ void game3_DrawObjects()
                                     && snakeBodyCenter.x != -500 && snakeBodyCenter.y != -500
                                     && do_delete == true )
                             {
+
                                 int16_t delete_color = SN_BG_COLOR;
-
-                                // if the player is up against the border, the erase function
-                                // can delete portions of the off-map because it writes in
-                                // white instead of black.
-
-                                // CHECKING LEFT BORDER ----------------------
-                                if ( snakeBodyCenter.x <= SN_MAP_MIN_X // + SN_SNAKE_SIZE / 2 + 1
-                                        && player->dir == LEFT )
-                                    delete_color = LCD_BLACK;
-
-                                // CHECKING RIGHT BORDER ---------------------
-                                else if ( snakeBodyCenter.x >= SN_MAP_MAX_X // - 1 - SN_SNAKE_SIZE / 2
-                                        && player->dir == RIGHT)
-                                    delete_color = LCD_BLACK;
-
-                                // CHECKING TOP BORDER -----------------------
-                                else if ( snakeBodyCenter.y <= SN_MAP_MIN_Y // + SN_SNAKE_SIZE / 2 + 1
-                                        && player->dir == UP)
-                                    delete_color = LCD_BLACK;
-
-                                // CHECKING BOTTOM BORDER --------------------
-                                else if ( snakeBodyCenter.y >= SN_MAP_MAX_Y // - 1 - SN_SNAKE_SIZE / 2
-                                        && player->dir == DOWN)
-                                    delete_color = LCD_BLACK;
+                                game3_checkDeleteColor(&snakeBodyCenter, &player->dir, &delete_color);
 
                                 G8RTOS_WaitSemaphore(&LCDREADY);
                                 LCD_DrawRectangle(prevMappedBodyCenter.x - SN_SNAKE_SIZE / 2,
@@ -1342,6 +1420,9 @@ void game3_DrawObjects()
                 // currently off screen and the previous needs to be deleted.
                 else if ( !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
+                    int16_t delete;
+                    game3_checkDeleteColor(&player->center, &me->dir, &delete);
+
                     point_t tempCenter;
                     tempCenter.x = mappedCenter.x + x_off * SN_SNAKE_SIZE;
                     tempCenter.y = mappedCenter.y + y_off * SN_SNAKE_SIZE;
@@ -1353,7 +1434,7 @@ void game3_DrawObjects()
                                           tempCenter.x + SN_SNAKE_SIZE / 2,
                                           tempCenter.y - SN_SNAKE_SIZE / 2,
                                           tempCenter.y + SN_SNAKE_SIZE / 2,
-                                          SN_BG_COLOR);
+                                          delete);
                         G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
