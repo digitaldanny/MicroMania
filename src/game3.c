@@ -605,20 +605,20 @@ void game3_JoinGame()
 
     // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
     // left border init ----------------------------------------
-    startPointLeft.x = SN_MAP_MIN_X;    startPointLeft.y = SN_MAP_MIN_Y;
-    endPointLeft.x = SN_MAP_MIN_X;      endPointLeft.y = SN_MAP_MAX_Y;
+    startPointLeft.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointLeft.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
+    endPointLeft.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;      endPointLeft.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
     // right border init ----------------------------------------
-    startPointRight.x = SN_MAP_MAX_X;    startPointRight.y = SN_MAP_MIN_Y;
-    endPointRight.x = SN_MAP_MAX_X;      endPointRight.y = SN_MAP_MAX_Y;
+    startPointRight.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;    startPointRight.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
+    endPointRight.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointRight.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
     // top border init ----------------------------------------
-    startPointTop.x = SN_MAP_MIN_X;    startPointTop.y = SN_MAP_MIN_Y;
-    endPointTop.x = SN_MAP_MAX_X;      endPointTop.y = SN_MAP_MIN_Y;
+    startPointTop.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointTop.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
+    endPointTop.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointTop.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
 
     // bottom border init ----------------------------------------
-    startPointBottom.x = SN_MAP_MIN_X;    startPointBottom.y = SN_MAP_MAX_Y;
-    endPointBottom.x = SN_MAP_MAX_X;      endPointBottom.y = SN_MAP_MAX_Y;
+    startPointBottom.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
+    endPointBottom.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
     do_delete = false;
     do_draw = false;
@@ -699,8 +699,30 @@ void game3_SendDataToHost()
  */
 void game3_ReadJoystickClient()
 {
+    int16_t joystick_x = 0;
+    int16_t joystick_y = 0;
+
     while(1)
     {
+        // moving average of the joystick inputs
+        GetJoystickCoordinates(&joystick_x, &joystick_y);
+        avgX = (avgX + joystick_x + JOYSTICK_BIAS_X) >> 1;
+        avgY = (avgY + joystick_y + JOYSTICK_BIAS_Y) >> 1;
+
+        // Update the packet that will be sent back to the host
+        // so the gamestate can be updated.
+        if ( abs(avgX) > abs(avgY) && abs(avgX) > 1000 )
+        {
+            if ( avgX >= 0 )   { game3_ClientToHost.dir = LEFT;  }
+            else               { game3_ClientToHost.dir = RIGHT; }
+        }
+
+        else if ( abs(avgX) < abs(avgY) && abs(avgY) > 1000 )
+        {
+            if ( avgY >= 0 )   { game3_ClientToHost.dir = DOWN; }
+            else               { game3_ClientToHost.dir = UP;   }
+        }
+
         sleep(10);
     }
 }
@@ -1101,21 +1123,44 @@ void game3_DrawObjects()
                 mapObjectToMe(&player->center, &mappedCenter);
                 mapObjectToPrev(0, &prevPlayer->center, &prevMappedCenter);
 
+                // Solves offset required to delete the previous snake head
+                int16_t x_off;
+                int16_t y_off;
+                if ( me->dir == UP )
+                {
+                    x_off = 0;
+                    y_off = -1;
+                }
+                else if ( me->dir == DOWN )
+                {
+                    x_off = 0;
+                    y_off = 1;
+                }
+                else if ( me->dir == RIGHT )
+                {
+                    x_off = 1;
+                    y_off = 0;
+                }
+                else if ( me->dir == LEFT )
+                {
+                    x_off = -1;
+                    y_off = 0;
+                }
+
                 // erase player's previous head position, only used for the other
                 // player's snake. If playing as host, the host's head will not ever
                 // be redraw because it is always on the center of the map. The enemy
                 // player's snake head WILL be redrawn because it should always be changing
                 // position.
-
                 if ( withinPlayerRange(&prevMappedCenter)
-                        && !(player->center.x == me->center.x && player->center.y == me->center.y))
+                        && !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
                     G8RTOS_WaitSemaphore(&LCDREADY);
-                    LCD_DrawRectangle(prevMappedCenter.x - SN_SNAKE_SIZE / 2,
-                                      prevMappedCenter.x + SN_SNAKE_SIZE / 2,
-                                      prevMappedCenter.y - SN_SNAKE_SIZE / 2,
-                                      prevMappedCenter.y + SN_SNAKE_SIZE / 2,
-                                      LCD_YELLOW); // SN_BG_COLOR);
+                    LCD_DrawRectangle(prevMappedCenter.x - SN_SNAKE_SIZE / 2 + x_off * SN_SNAKE_SIZE,
+                                      prevMappedCenter.x + SN_SNAKE_SIZE / 2 + x_off * SN_SNAKE_SIZE,
+                                      prevMappedCenter.y - SN_SNAKE_SIZE / 2 + y_off * SN_SNAKE_SIZE,
+                                      prevMappedCenter.y + SN_SNAKE_SIZE / 2 + y_off * SN_SNAKE_SIZE,
+                                      SN_BG_COLOR);
                     G8RTOS_SignalSemaphore(&LCDREADY);
                 }
 
@@ -1247,6 +1292,25 @@ void game3_DrawObjects()
                                 G8RTOS_SignalSemaphore(&LCDREADY);
                             }
                         }
+                    }
+                }
+                // if the current snake is not within the screen, erase the previous one because it is
+                // currently off screen and the previous needs to be deleted.
+                else if ( !(player->center.x == me->center.x && player->center.y == me->center.y) )
+                {
+                    point_t tempCenter;
+                    tempCenter.x = mappedCenter.x + x_off * SN_SNAKE_SIZE;
+                    tempCenter.y = mappedCenter.y + y_off * SN_SNAKE_SIZE;
+
+                    if ( withinPlayerRange(&tempCenter) )
+                    {
+                        G8RTOS_WaitSemaphore(&LCDREADY);
+                        LCD_DrawRectangle(tempCenter.x - SN_SNAKE_SIZE / 2,
+                                          tempCenter.x + SN_SNAKE_SIZE / 2,
+                                          tempCenter.y - SN_SNAKE_SIZE / 2,
+                                          tempCenter.y + SN_SNAKE_SIZE / 2,
+                                          SN_BG_COLOR);
+                        G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
 
