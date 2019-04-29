@@ -190,7 +190,6 @@ void game3_InitBoardState()
 
 void game3_addHostThreads()
 {
-    // Add background threads ------------------------------------
 #ifndef SINGLE
     G8RTOS_AddThread(&game3_SendDataToClient, 20, 0xFFFFFFFF, "SEND_TO_CLIENT");
     G8RTOS_AddThread(&game3_ReceiveDataFromClient, 20, 0xFFFFFFFF, "RECEIVE_FROM_CLIENT");
@@ -204,7 +203,11 @@ void game3_addHostThreads()
 
 void game3_addClientThreads()
 {
-
+    G8RTOS_AddThread(&game3_SendDataToHost, 20, 0xFFFFFFFF, "SEND_TO_HOST");
+    G8RTOS_AddThread(&game3_ReceiveDataFromHost, 20, 0xFFFFFFFF, "RECEIVE_FROM_HOST");
+    G8RTOS_AddThread(&game3_ReadJoystickClient, 25, 0xFFFFFFFF, "JOYSTICK_CLIENT");
+    G8RTOS_AddThread(&game3_DrawObjects, 22, 0xFFFFFFFF, "DRAW_OBJECTS");
+    G8RTOS_AddThread(&common_IdleThread, 255, 0xFFFFFFFF, "IDLE");
 }
 
 // This function loops through all food structures and checks
@@ -667,6 +670,15 @@ void game3_ReceiveDataFromHost()
 {
     while(1)
     {
+        // Receive packet from the host
+        G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
+        ReceiveData( (_u8*)&game3_HostToClient, sizeof(game3_HostToClient));
+        G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
+
+        // 3. Check if the game is done. Add EndOfGameHost thread if done.
+        // if ( game3_HostToClient.choice_made == true )
+        //     G8RTOS_AddThread(ExitMenuClient, 0, 0xFFFFFFFF, "END_CLIENT_");
+
         sleep(2);
     }
 }
@@ -987,9 +999,15 @@ void game3_UpdateGamestateHost()
  */
 void game3_SendDataToClient()
 {
-    while(1)
+    while (1)
     {
-        // Move the player in increments of the size of the snake
+        G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
+        SendData( (uint8_t*)&game3_HostToClient, game3_HostToClient.client.IP_address, sizeof(game3_HostToClient) );
+        G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
+
+        // Check if the game choice has been made. If yes, add those threads
+        // if ( game3_HostToClient.choice_made == true )
+        //     G8RTOS_AddThread(&ExitMenuHost, 0, 0xFFFFFFFF, "END_HOST");
 
         sleep(5);
     }
