@@ -17,7 +17,7 @@
  *      "dead" players who will be controlled by the client.
  *
  */
-#define SINGLE
+#define MULTI
 #include "game2.h"
 #include "menu.h"
 
@@ -129,15 +129,15 @@ uint16_t shroom_map[12][12] = {
 };
 //add host threads
 void Game2_addHostThreads(){
-    G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,    "UpdatePlayerStatus" );
+    //G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,    "UpdatePlayerStatus" );
     G8RTOS_AddThread( &Game2_GenerateBall, 20, 0xFFFFFFFF,          "GENERATE_BALL___" );
     G8RTOS_AddThread( &Game2_GenerateShroom, 20, 0xFFFFFFFF,          "GENERATE_BALL___" );
     G8RTOS_AddThread( &Game2_DrawObjects, 10, 0xFFFFFFFF,           "DRAW_OBJECTS____" );
     G8RTOS_AddThread( &Game2_ReadJoystickHost, 20, 0xFFFFFFFF,      "READ_JOYSTICK___" );
     //G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,    "UpdatePlayerStatus" );
     G8RTOS_AddThread( &Game2_IdleThread, 255, 0xFFFFFFFF,           "IDLE____________" );
-    G8RTOS_AddThread(&Game2_MoveBall, 10, 0xFFFFFFFF, "MOVE_BALL_______");
-    G8RTOS_AddThread(&Game2_MoveShroom, 11, 0xFFFFFFFF, "MOVE_BALL_______");
+    G8RTOS_AddThread(&Game2_MoveBall, 11, 0xFFFFFFFF, "MOVE_BALL_______");
+    G8RTOS_AddThread(&Game2_MoveShroom, 12, 0xFFFFFFFF, "MOVE_BALL_______");
 
     #ifndef SINGLE
         G8RTOS_AddThread( &Game2_ReceiveDataFromClient, DEFAULT_PRIORITY, 0xFFFFFFFF, "RECEIVE_DATA____" );
@@ -150,7 +150,7 @@ void Game2_addClientThreads(){
     G8RTOS_AddThread( &Game2_SendDataToHost, DEFAULT_PRIORITY, 0xFFFFFFFF,        "SEND_DATA_______" );
     G8RTOS_AddThread( &Game2_ReceiveDataFromHost, DEFAULT_PRIORITY, 0xFFFFFFFF,   "RECEIVE_DATA____" );
     G8RTOS_AddThread( &Game2_DrawObjects, 10, 0xFFFFFFFF,                         "DRAW_OBJECTS____" );
-    G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,    "UpdatePlayerStatus" );
+    //G8RTOS_AddThread( &Game2_UpdatePlayerStatus, 20, 0xFFFFFFFF,    "UpdatePlayerStatus" );
     G8RTOS_AddThread( &Game2_IdleThread, 255, 0xFFFFFFFF,                         "IDLE____________" );
 }
 
@@ -162,7 +162,7 @@ void Game2_CreateGame(){
 
 }
 
-void GAME2_JoinGame()
+void Game2_JoinGame()
 {
     // 1. Set initial SpecificPlayerInfo_t strict attributes ( getLocalIP() ).
     client_player.IP_address = getLocalIP();
@@ -1078,9 +1078,6 @@ void Game2_EndOfGameHost(){
     gamestate.players[1].kill = false;
     kill_count = 0;
 
-    gamestate.winner = true;    // this notifies client kill all threads
-    //SendData((uint8_t*)&gamestate, gamestate.player.IP_address, sizeof(gamestate));
-    // delay for 1 secondish
     G8RTOS_WaitSemaphore(&LCDREADY);
 
     LCD_Clear(White);
@@ -1121,11 +1118,11 @@ void Game2_EndOfGameHost(){
         }
         gamestate.players[j].RunTime = 0;
     }
-    G8RTOS_SignalSemaphore(&LCDREADY);
 
 
     sleep(2000);
     LCD_Clear(Black);
+    G8RTOS_SignalSemaphore(&LCDREADY);
     menu_initMenu();
     menu_updateMenu();
 
@@ -1154,21 +1151,26 @@ void Game2_EndOfGameClient()
         G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
 
 
+        // send response to the client
+        gamestate.gameDone = false;
         for(int i = 0; i < MAX_NUM_OF_BALLS; i++){
             gamestate.balls[i].alive = 0;
             gamestate.balls[i].kill = 0;
         }
-
         ballCount = 0;
         for(int i = 0; i < MAX_NUM_OF_SHROOMS; i++){
             gamestate.shroom[i].alive = 0;
             gamestate.shroom[i].kill = 0;
         }
         ShroomCount = 0;
+        gamestate.players[0].kill = false;
+        gamestate.players[1].kill = false;
+        kill_count = 0;
+        ShroomCount = 0;
+        G8RTOS_WaitSemaphore(&LCDREADY);
         LCD_Clear(White);
         char status_str[30];
         if(MAX_NUM_OF_PLAYERS == 1){
-            G8RTOS_WaitSemaphore(&LCDREADY);
             for(int i = 0; i < MARIO_ROWS; i++){
                 for(int j = 0; j < MARIO_COLUMNS; j++){
                     LCD_SetPoint(j, i, mario_red_map[i][j]);
@@ -1176,7 +1178,6 @@ void Game2_EndOfGameClient()
             }
             sprintf(status_str,"You had a run time of: %u", gamestate.players[0].RunTime);
             LCD_Text(15, 0, status_str, Black);
-            G8RTOS_SignalSemaphore(&LCDREADY);
         }
         else {
             if(gamestate.players[0].RunTime > gamestate.players[1].RunTime){
@@ -1200,14 +1201,13 @@ void Game2_EndOfGameClient()
         }
         sleep(2000);
         LCD_Clear(Black);
-        menu_initMenu();
-        menu_updateMenu();
-        G8RTOS_KillSelf();
-
+        G8RTOS_SignalSemaphore(&LCDREADY);
+        //menu_initMenu();
+        //menu_updateMenu();
 
         // 6. Add GenerateBall, DrawObjects, ReadJoystickHost, SendDataToClient
         //      ReceiveDataFromClient, MoveLEDs (low priority), Idle
-        G8RTOS_AddThread( &menu_MenuClient, 15, 0xFFFFFFFF, "MENU_HOST" ); // lowest priority
+        G8RTOS_AddThread( &menu_MenuClient, 15, 0xFFFFFFFF, "MENU_CLIENT" ); // lowest priority
 
         // 7. Kill self.
         G8RTOS_KillSelf();

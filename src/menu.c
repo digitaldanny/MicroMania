@@ -1,4 +1,4 @@
-#define SINGLE
+#define MULTI
 
 /*
  *  menu.c
@@ -9,6 +9,7 @@
  *  UPDATES     :
  *  4/18/2019   : File initialization.
  *  4/24/2019   : Fixed the sizing inconsistency issue for the menu blocks
+ *  4/28/2019   : Multi-player menu navigation stabilized.
  *
  *  TODO        :
  *
@@ -20,7 +21,8 @@
 HostToClient_t packet_HostToClient;
 HostToClient_t packet_zipped;
 ClientToHost_t packet_ClientToHost;
-uint8_t numPlayers;
+static uint8_t numPlayers;
+uint8_t turn = 0;
 
 /*********************************************** Functions ********************************************************************/
 // opening menu to choose between host or client
@@ -28,24 +30,15 @@ uint8_t numPlayers;
 // B1 => CLIENT
 void menu_writeHostOrClient()
 {
-    G8RTOS_WaitSemaphore(&LCDREADY);
-
     LCD_Text(8*14, 16*6, "B0 -> HOST", LCD_WHITE);
     LCD_Text(8*14, 16*7, "B2 -> CLIENT", LCD_WHITE);
-
-    G8RTOS_SignalSemaphore(&LCDREADY);
-
 }
 
 // Erases the opening menu to allow the main
 // menu to open
 void menu_eraseHostOrClient()
 {
-    G8RTOS_WaitSemaphore(&LCDREADY);
-
     LCD_Clear(LCD_BLACK);
-
-    G8RTOS_SignalSemaphore(&LCDREADY);
 }
 
 void menu_addThreadsHost ( void )
@@ -59,7 +52,7 @@ void menu_addThreadsHost ( void )
 
 void menu_addThreadsClient ( void )
 {
-    G8RTOS_AddThread(&menu_ReceiveDataFromHost, 15, 0xFFFFFFFF, "SEND_DATA_2_HOST");
+    G8RTOS_AddThread(&menu_ReceiveDataFromHost, 15, 0xFFFFFFFF, "REC_DATA_FR_HOST");
     G8RTOS_AddThread(&common_IdleThread, 255, 0xFFFFFFFF, "IDLE");
 }
 
@@ -67,8 +60,6 @@ void menu_addThreadsClient ( void )
 void menu_initMenu ( void )
 {
     // draw the menu quadrants
-    G8RTOS_WaitSemaphore(&LCDREADY);
-
     LCD_DrawRectangle(MAX_SCREEN_X/2 - 1, MAX_SCREEN_X/2, 0, MAX_SCREEN_Y - 1, LCD_WHITE);
     LCD_DrawRectangle(0, MAX_SCREEN_X, MAX_SCREEN_Y/2 - 1, MAX_SCREEN_Y/2, LCD_WHITE);
 
@@ -81,10 +72,8 @@ void menu_initMenu ( void )
     // write the game options in each quadrant
     LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*3, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "PAC-MAN", LCD_WHITE);
     LCD_Text( (QUAD_2_MAX_X + QUAD_2_MIN_X)/2 - 8*4, (QUAD_2_MAX_Y + QUAD_2_MIN_Y)/2 - 16, "DODGEBALL", LCD_WHITE);
-    LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SNAKE", LCD_WHITE);
+    LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SLITHER", LCD_WHITE);
     LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_WHITE);
-    G8RTOS_SignalSemaphore(&LCDREADY);
-
 }
 
 // redraws the menu with the correct tile hi-lited
@@ -93,7 +82,6 @@ void menu_updateMenu ( void )
     // only redraw the square if required
     if ( packet_HostToClient.game_number != packet_HostToClient.prev_game_number )
     {
-        G8RTOS_WaitSemaphore(&LCDREADY);
 
         // update the current game quadrant
         if ( packet_HostToClient.game_number == 0 )
@@ -109,7 +97,7 @@ void menu_updateMenu ( void )
         else if ( packet_HostToClient.game_number == 2 )
         {
             LCD_DrawRectangle(QUAD_3_MIN_X + 3, QUAD_3_MAX_X - 3, QUAD_3_MIN_Y + 2, QUAD_3_MAX_Y - 4, LCD_WHITE);
-            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SNAKE", LCD_BLACK);
+            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SLITHER", LCD_BLACK);
         }
         else if ( packet_HostToClient.game_number == 3 )
         {
@@ -131,7 +119,7 @@ void menu_updateMenu ( void )
         else if ( packet_HostToClient.prev_game_number == 2 )
         {
             LCD_DrawRectangle(QUAD_3_MIN_X + 2, QUAD_3_MAX_X - 2, QUAD_3_MIN_Y + 1, QUAD_3_MAX_Y - 3, LCD_BLACK);
-            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SNAKE", LCD_WHITE);
+            LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SLITHER", LCD_WHITE);
         }
         else if ( packet_HostToClient.prev_game_number == 3 )
         {
@@ -139,11 +127,12 @@ void menu_updateMenu ( void )
             LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_WHITE);
 
         }
-        G8RTOS_SignalSemaphore(&LCDREADY);
 
+#ifdef SINGLE
         // update the previous game number so that the LCD only has to
         // update when a new game number is chosen.
         packet_HostToClient.prev_game_number = packet_HostToClient.game_number;
+#endif
     }
 }
 /*********************************************** Host Threads *********************************************************************/
@@ -163,10 +152,13 @@ void menu_MenuHost ( void )
     packet_HostToClient.client.acknowledge  = 0;
     packet_HostToClient.client.joined       = 0;
     packet_HostToClient.client.playerNumber = 0;
+    buttonUP_pressed = 0;
     numPlayers = 1; // counting the host as the first player
 
     // hardware initializations
     common_buttons_init();
+    turn = 0;
+    //G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
 
     P2->OUT &= ~(BIT0 | BIT1 | BIT2); // initialize led's off
     P2->DIR |= (BIT0 | BIT1 | BIT2); // set R.G.B direction
@@ -201,13 +193,14 @@ void menu_MenuHost ( void )
 
     while (1)
     {
-        menu_updateMenu();
 
         // if the player enters the common button interrupt,
         // with the up button, the up_button boolean will get set.
         if ( buttonUP_pressed ) packet_HostToClient.choice_made = true;
 
 #ifdef SINGLE
+        menu_updateMenu();
+
         // Check if the game choice has been made. If yes, add those threads
         if ( packet_HostToClient.choice_made == true )
             G8RTOS_AddThread(&ExitMenuHost, 0, 0xFFFFFFFF, "END_HOST");
@@ -221,10 +214,15 @@ void menu_SendDataToClient ( void )
 {
     while (1)
     {
-        // 2. Send packet
         G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
         SendData( (uint8_t*)&packet_HostToClient, packet_HostToClient.client.IP_address, sizeof(packet_HostToClient) );
         G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
+
+        menu_updateMenu();
+
+        // update the previous game number so that the LCD only has to
+        // update when a new game number is chosen.
+        packet_HostToClient.prev_game_number = packet_HostToClient.game_number;
 
         // Check if the game choice has been made. If yes, add those threads
         if ( packet_HostToClient.choice_made == true )
@@ -329,7 +327,7 @@ void menu_JoystickHost ( void )
                 packet_HostToClient.game_number = 0;
         }
 
-        sleep(15);
+        sleep(10);
     }
 }
 
@@ -362,8 +360,15 @@ void ExitMenuHost ( void )
     else if ( packet_HostToClient.game_number == G_SUMO )
         G8RTOS_AddThread(&game4_CreateGame, 16, 0xFFFFFFFF, "CREATE_SUMO");
      */
-    //if ( packet_HostToClient.game_number == G_DODGEBALL )
-        G8RTOS_AddThread(&Game2_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
+    if ( packet_HostToClient.game_number == G_SNAKE )
+        G8RTOS_AddThread(&game3_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
+    else
+        LCD_Clear(LCD_PURPLE);
+
+    if ( packet_HostToClient.game_number == G_DODGE )
+        G8RTOS_AddThread(&Game2_CreateGame, 16, 0xFFFFFFFF, "CREATE_DODGE");
+    else
+        LCD_Clear(LCD_PURPLE);
 
     // reset so a choice can be made again later
     packet_HostToClient.choice_made = false;
@@ -379,6 +384,7 @@ void menu_MenuClient ( void )
     packet_ClientToHost.acknowledge = false;
     packet_ClientToHost.joined = false;
     packet_ClientToHost.playerNumber = 0;   // reassigned by host
+    packet_HostToClient.choice_made = false;
 
     // hardware initializations
     common_buttons_init();
@@ -392,8 +398,8 @@ void menu_MenuClient ( void )
     do
     {
         SendData(       (uint8_t*)&packet_ClientToHost, HOST_IP_ADDR, sizeof(packet_ClientToHost) );   // start handshake
-        ReceiveData(    (uint8_t*)&packet_ClientToHost, sizeof(packet_ClientToHost) );   // check if host acknowledges
-    } while( packet_ClientToHost.joined == false );
+        ReceiveData(    (uint8_t*)&packet_HostToClient, sizeof(packet_HostToClient) );   // check if host acknowledges
+    } while( packet_HostToClient.client.joined == false );
 
     // 4. Acknowledge client to tell them they have received
     // the message about joining the game and the game can begin.
@@ -407,12 +413,19 @@ void menu_MenuClient ( void )
     // client and calculating joystick information from host.
     menu_addThreadsClient();
     menu_initMenu();
+    sleep(10);
 
-    while (1)
+#ifdef SINGLE
+    while(1)
     {
-        menu_updateMenu();
+
         sleep(10);
     }
+#endif
+
+#ifdef MULTI
+    G8RTOS_KillSelf();
+#endif
 }
 
 void menu_ReceiveDataFromHost ( void )
@@ -427,7 +440,10 @@ void menu_ReceiveDataFromHost ( void )
         // check that the data was correctly synchronized then
         // unpack the packet into the global gamestate.
         if ( packet_zipped.client.IP_address == getLocalIP() )
+        {
             packet_HostToClient = packet_zipped;
+            menu_updateMenu();
+        }
 
         // 3. Check if the game is done. Add EndOfGameHost thread if done.
         if ( packet_HostToClient.choice_made == true )
@@ -469,6 +485,11 @@ void ExitMenuClient ( void )
         game4_addClientThreads();
     }
     */
+    if ( packet_HostToClient.game_number == G_SNAKE )
+        G8RTOS_AddThread(&game3_JoinGame, 16, 0xFFFFFFFF, "JOIN_SNAKE");
+
+    if ( packet_HostToClient.game_number == G_DODGE )
+        G8RTOS_AddThread(&Game2_JoinGame, 16, 0xFFFFFFFF, "JOIN_Dodge");
 
     packet_HostToClient.choice_made = false;
 
