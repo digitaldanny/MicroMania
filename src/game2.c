@@ -195,6 +195,8 @@ void Game2_InitBoardState(){
     if(MAX_NUM_OF_PLAYERS == 1){
         gamestate.players[0].currentCenterX = (ARENA_MAX_X - ARENA_MIN_X) >> 1;
         gamestate.players[0].currentCenterY = (ARENA_MAX_Y - ARENA_MIN_Y) >> 1;
+        gamestate.players[0].RunTime = 0;
+
         gamestate.players[0].color = Cyan;
         for(int i = 0; i < MARIO_ROWS; i++){
             for(int j = 0; j < MARIO_COLUMNS; j++){
@@ -207,6 +209,8 @@ void Game2_InitBoardState(){
         gamestate.players[0].currentCenterY = (ARENA_MAX_Y - ARENA_MIN_Y) >> 2;
         gamestate.players[1].currentCenterX = ((ARENA_MAX_X - ARENA_MIN_X) >> 1) + gamestate.players[0].currentCenterX;
         gamestate.players[1].currentCenterY = ((ARENA_MAX_Y - ARENA_MIN_Y) >> 1) + gamestate.players[0].currentCenterY;
+        gamestate.players[0].RunTime = 0;
+        gamestate.players[1].RunTime = 0;
         gamestate.players[0].color = Cyan;
         gamestate.players[1].color = Magenta;
         for(int i = 0; i < MARIO_ROWS; i++){
@@ -1007,7 +1011,7 @@ void Game2_UpdatePlayerStatus()
     while(1){
         for(int i = 0; i < MAX_NUM_OF_PLAYERS; i++){
             if(gamestate.players[i].num_lives > 0){
-                gamestate.players[i].RunTime = SystemTime/1000 - prev_run_time;
+                gamestate.players[i].RunTime++;
             }
             if(gamestate.players[i].num_lives > 0){
                 sprintf(status_str,"L:%u RT:%u", gamestate.players[i].num_lives, gamestate.players[i].RunTime);
