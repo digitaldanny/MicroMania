@@ -601,8 +601,6 @@ void game3_JoinGame()
     G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
     G8RTOS_InitSemaphore(&LCDREADY, 1);
 
-    common_buttons_init();
-
     // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
     // left border init ----------------------------------------
     startPointLeft.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointLeft.y = SN_MAP_MIN_Y - SN_SNAKE_SIZE / 2;
@@ -690,6 +688,10 @@ void game3_SendDataToHost()
 {
     while(1)
     {
+        G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
+        SendData( (_u8*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );
+        G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
+
         sleep(5);
     }
 }
@@ -921,6 +923,8 @@ void game3_UpdateGamestateHost()
     // OTHER VARIABLES
     int16_t offsetX = 0;
     int16_t offsetY = -1;   // init to be moving upward
+    int16_t offsetXClient = 0;
+    int16_t offsetYClient = -1;
 
     while(1)
     {
@@ -930,10 +934,11 @@ void game3_UpdateGamestateHost()
 
         G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
 
-        // HOST ADJUSTMENTS ----------------------------------
+        // GAMESTATE ADJUSTMENTS ----------------------------------
         if ( updateJoystickCount >= SN_UPDATE_PLAYER_POS )
         {
 
+            // HOST SIDE UPDATES ======================================
             // Player should only move one block at a time. Determine
             // which direction to move based on which joystick value is
             // highest.
@@ -973,6 +978,34 @@ void game3_UpdateGamestateHost()
             else if ( me->center.y <= SN_MAP_MIN_Y ) // SN_SNAKE_SIZE / 2)
             {
                 me->center.y = SN_MAP_MIN_Y; // SN_SNAKE_SIZE / 2;
+            }
+
+            // CLIENT SIDE UPDATE ==============================================
+            // Player update for the client data
+            if ( game3_HostToClient.players[1].dir == LEFT )        { offsetXClient = 1; offsetYClient = 0;     }
+            else if ( game3_HostToClient.players[1].dir == RIGHT )  { offsetXClient = -1; offsetYClient = 0;    }
+            else if ( game3_HostToClient.players[1].dir == DOWN )   { offsetXClient = 0; offsetYClient = 1;     }
+            else                                                    { offsetXClient = 0; offsetYClient = -1;    }
+
+            game3_HostToClient.players[1].center.x -= offsetXClient * SN_SNAKE_SIZE;
+            game3_HostToClient.players[1].center.y += offsetYClient * SN_SNAKE_SIZE;
+
+            // Map boundaries to make sure the player does not travel too far
+            if ( game3_HostToClient.players[1].center.x >= SN_MAP_MAX_X) // - SN_SNAKE_SIZE / 2)
+            {
+                game3_HostToClient.players[1].center.x = SN_MAP_MAX_X; // - SN_SNAKE_SIZE / 2;
+            }
+            else if ( game3_HostToClient.players[1].center.x <= SN_MAP_MIN_X ) //SN_SNAKE_SIZE / 2)
+            {
+                game3_HostToClient.players[1].center.x = SN_MAP_MIN_X; //SN_SNAKE_SIZE / 2;
+            }
+            if ( game3_HostToClient.players[1].center.y >= SN_MAP_MAX_Y ) // - SN_SNAKE_SIZE / 2)
+            {
+                game3_HostToClient.players[1].center.y = SN_MAP_MAX_Y; // - SN_SNAKE_SIZE / 2;
+            }
+            else if ( game3_HostToClient.players[1].center.y <= SN_MAP_MIN_Y ) // SN_SNAKE_SIZE / 2)
+            {
+                game3_HostToClient.players[1].center.y = SN_MAP_MIN_Y; // SN_SNAKE_SIZE / 2;
             }
 
             // DEBUGGGGGGGGGGGG ****************************************************
@@ -1031,7 +1064,7 @@ void game3_SendDataToClient()
         // if ( game3_HostToClient.choice_made == true )
         //     G8RTOS_AddThread(&ExitMenuHost, 0, 0xFFFFFFFF, "END_HOST");
 
-        sleep(5);
+        sleep(2);
     }
 }
 
@@ -1042,6 +1075,17 @@ void game3_ReceiveDataFromClient()
 {
     while(1)
     {
+        // if the response is greater than 0, valid data was returned
+        // to the gamestate. If not, no valid data was returned and
+        // thread is put to sleep to avoid deadlock.
+        G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
+        ReceiveData( (uint8_t*)&game3_HostToClient.client, sizeof(game3_HostToClient.client));
+        G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
+
+        // reassign direction so the client player can move around
+        // using the joystick.
+        game3_HostToClient.players[1].dir = game3_HostToClient.client.dir;
+
         sleep(5);
     }
 }
