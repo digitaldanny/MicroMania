@@ -4,18 +4,17 @@
  *  menu.c
  *
  *  Created     : 4/20/2019
- *  Last Edit   : 4/20/2019
+ *  Last Edit   : 4/29/2019
  *
  *  UPDATES     :
- *  4/18/2019   : Initialized game functions.
  *  4/20/2019   : Snake head draws and map movement added
  *  4/24/2019   : Map movement stabilized and added boundaries to the map
  *  4/25/2019   : Added snake head animation drawing
  *  4/26/2019   : Block borders to map with clean erasing for snake at edges
  *  4/27/2019   : Snake linked list added so snake can grow and shrink
  *  4/28/2019   : Snake offset at border fixed. Clean erase bug fixed.
- *                Food eating mechanic and sending new food coordinates to
- *                clients.
+ *                initial Snake/Food drawing on both boards works.
+ *  4/29/2019   : Finished multiplayer threads (send/receives)
  *
  *  DESCRIPTION : SLITHER.IO
  *
@@ -1270,7 +1269,8 @@ void game3_DrawObjects()
                 {
 
                     // erase the old position if this is not an initialization
-                    if ( (prevFood->center.x != -500) && (prevFood->center.y != -500) )
+                    // if ( (prevFood->center.x != -500) && (prevFood->center.y != -500) )
+                    if ( withinPlayerRange(&prevFood[i].center) )
                     {
                         G8RTOS_WaitSemaphore(&LCDREADY);
                         LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
