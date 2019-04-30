@@ -306,23 +306,22 @@ point_t game3_spawnFood()
         tempX = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_X - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_X + SN_FOOD_SIZE;
         tempY = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_Y - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_Y + SN_FOOD_SIZE;
 
-        // make sure the center does not match any of the
-        // current player body locations
-        for (int i = 0; i < MAX_NUM_PLAYERS; i++)
+        for (int j = 0; j < MAX_NUM_PLAYERS; j++)
         {
-            tempPlayerPtr = &game3_HostToClient.players[i];
-
-            // if X is between any center X positions OR if Y is between any
-            // center Y positions, regenerate
-            if (    (tempX < tempPlayerPtr->center.x - SN_FOOD_SPAWN_RANGE / 2
-                    && tempX > tempPlayerPtr->center.x + SN_FOOD_SPAWN_RANGE / 2)
-
-                                            ||
-
-                    (tempY < tempPlayerPtr->center.y - SN_FOOD_SPAWN_RANGE / 2
-                    && tempY > tempPlayerPtr->center.y + SN_FOOD_SPAWN_RANGE / 2)   )
+            for (int i = 0; i < game3_snakeLength(j); i++)
             {
-                continue; // don't spawn this iteration
+                // if X is between any center X positions OR if Y is between any
+                // center Y positions, regenerate
+                if (    (tempX < game3_snakeAt(i, j).x - SN_FOOD_SPAWN_RANGE / 2
+                        && tempX > game3_snakeAt(i, j).x + SN_FOOD_SPAWN_RANGE / 2)
+
+                                                ||
+
+                        (tempY < game3_snakeAt(i, j).y - SN_FOOD_SPAWN_RANGE / 2
+                        && tempY > game3_snakeAt(i, j).y + SN_FOOD_SPAWN_RANGE / 2)   )
+                {
+                    continue; // don't spawn this iteration
+                }
             }
         }
 
