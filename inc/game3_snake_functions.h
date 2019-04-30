@@ -85,4 +85,25 @@ int8_t game3_snakeLength(int8_t player_num);
 bool game3_compAt (int8_t index, int8_t player_num,
                     comp_t compare, comp_t axis);
 
+// PREVIOUS ANALYSIS ---------------------
+
+// This function iterates through the whole previous
+// snake array for the player
+bool game3_iteratePrevSnakeCenters( point_t * center, int8_t player_num );
+
+// This function stores the new MAPPED center value at the requested
+// index of the snake buffer and increases the buffer size
+void game3_storeToSnakeCenterBuffer( point_t * center, int8_t index, int8_t player_num );
+
+// This function resets the requested player number's snake buffer
+// with invalid center values and a size of 0
+void game3_resetSnakeBuffer( int8_t player_num );
+
+// This function will transfer all the mapped center points to
+// the array of previous center points and sets the previous
+// array size to the center buffer size. Afterwards, it calls
+// game3_resetSnakeBuffer to reset the buffer center points and
+// size.
+void game3_transferBufferToPrev (int8_t player_num);
+
 #endif /* INC_GAME3_SNAKE_FUNCTIONS_H_ */

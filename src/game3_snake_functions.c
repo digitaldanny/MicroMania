@@ -37,39 +37,29 @@ static snake_t * head;
 static snake_t * tail;
 static snake_t * body;
 static int8_t * size;
-static snake_t * prev_head;
-static snake_t * prev_tail;
-static snake_t * prev_body;
-static int8_t * prev_size;
 
 snake_t snake_pl0[SN_SNAKE_MAX_LENGTH];
 snake_t snake_pl1[SN_SNAKE_MAX_LENGTH];
 snake_t snake_pl2[SN_SNAKE_MAX_LENGTH];
-snake_t prev_snake_pl0[SN_SNAKE_MAX_LENGTH];
-snake_t prev_snake_pl1[SN_SNAKE_MAX_LENGTH];
-snake_t prev_snake_pl2[SN_SNAKE_MAX_LENGTH];
 
 int8_t snake_pl0_size;
 int8_t snake_pl1_size;
 int8_t snake_pl2_size;
-int8_t prev_snake_pl0_size;
-int8_t prev_snake_pl1_size;
-int8_t prev_snake_pl2_size;
 
 snake_t * snake_pl0_head;
 snake_t * snake_pl0_tail;
-snake_t * prev_snake_pl0_head;
-snake_t * prev_snake_pl0_tail;
 
 snake_t * snake_pl1_head;
 snake_t * snake_pl1_tail;
-snake_t * prev_snake_pl1_head;
-snake_t * prev_snake_pl1_tail;
 
 snake_t * snake_pl2_head;
 snake_t * snake_pl2_tail;
-snake_t * prev_snake_pl2_head;
-snake_t * prev_snake_pl2_tail;
+
+snake_t prevSnakes[3][SN_SNAKE_MAX_LENGTH];
+int8_t prevSnakesSize[3];
+
+snake_t bufferSnakes[3][SN_SNAKE_MAX_LENGTH];
+int8_t bufferSnakesSize[3];
 
 // HELPER FUNCTIONS --------------------
 // This function will point the head, tail, and
@@ -78,21 +68,21 @@ void game3_assignPointers(int8_t player_num)
 {
     if ( player_num == 0 )
     {
-        head = snake_pl0_head;      prev_head = prev_snake_pl0_head;
-        tail = snake_pl0_tail;      prev_tail = prev_snake_pl0_tail;
-        size = &snake_pl0_size;     prev_size = &prev_snake_pl0_size;
+        head = snake_pl0_head;
+        tail = snake_pl0_tail;
+        size = &snake_pl0_size;
     }
     else if ( player_num == 1 )
     {
-        head = snake_pl1_head;      prev_head = prev_snake_pl1_head;
-        tail = snake_pl1_tail;      prev_tail = prev_snake_pl1_tail;
-        size = &snake_pl1_size;     prev_size = &prev_snake_pl1_size;
+        head = snake_pl1_head;
+        tail = snake_pl1_tail;
+        size = &snake_pl1_size;
     }
     else if ( player_num == 2 )
     {
-        head = snake_pl2_head;      prev_head = prev_snake_pl2_head;
-        tail = snake_pl2_tail;      prev_tail = prev_snake_pl2_tail;
-        size = &snake_pl2_size;     prev_size = &prev_snake_pl2_size;
+        head = snake_pl2_head;
+        tail = snake_pl2_tail;
+        size = &snake_pl2_size;
     }
 }
 
@@ -138,62 +128,74 @@ void game3_initSnake(point_t * head_and_tail, int8_t player_num)
     {
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
-            body = &snake_pl0[i];           prev_body = &snake_pl0[i];
-            snake_pl0_size = 1;             prev_snake_pl0_size = 1;
+            body = &snake_pl0[i];
+            snake_pl0_size = 1;
 
-            body->alive = false;            prev_body->alive = false;
-            body->center.x = -500;          prev_body->center.x = -500;
-            body->center.y = -500;          prev_body->center.y = -500;
-            body->next = NULL;              prev_body->next = NULL;
-            body->next = NULL;              prev_body->next = NULL;
+            body->alive = false;
+            body->center.x = -500;
+            body->center.y = -500;
+            body->next = NULL;
+            body->next = NULL;
         }
 
-        snake_pl0_head = &snake_pl0[0];     prev_snake_pl0_head = &prev_snake_pl0[0];
-        snake_pl0_tail = snake_pl0_head;    prev_snake_pl0_tail = prev_snake_pl0_head;
+        snake_pl0_head = &snake_pl0[0];
+        snake_pl0_tail = snake_pl0_head;
     }
     else if ( player_num == 1 )
     {
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
-            body = &snake_pl1[i];           prev_body = &snake_pl1[i];
-            snake_pl1_size = 1;             prev_snake_pl1_size = 1;
+            body = &snake_pl1[i];
+            snake_pl1_size = 1;
 
-            body->alive = false;            prev_body->alive = false;
-            body->center.x = -500;          prev_body->center.x = -500;
-            body->center.y = -500;          prev_body->center.y = -500;
-            body->next = NULL;              prev_body->next = NULL;
-            body->next = NULL;              prev_body->next = NULL;
+            body->alive = false;
+            body->center.x = -500;
+            body->center.y = -500;
+            body->next = NULL;
+            body->next = NULL;
         }
 
-        snake_pl1_head = &snake_pl1[0];     prev_snake_pl1_head = &prev_snake_pl1[0];
-        snake_pl1_tail = snake_pl1_head;    prev_snake_pl1_tail = prev_snake_pl1_head;
+        snake_pl1_head = &snake_pl1[0];
+        snake_pl1_tail = snake_pl1_head;
     }
     else
     {
         for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++)
         {
-            body = &snake_pl2[i];           prev_body = &snake_pl2[i];
-            snake_pl2_size = 1;             prev_snake_pl2_size = 1;
+            body = &snake_pl2[i];
+            snake_pl2_size = 1;
 
-            body->alive = false;            prev_body->alive = false;
-            body->center.x = -500;          prev_body->center.x = -500;
-            body->center.y = -500;          prev_body->center.y = -500;
-            body->next = NULL;              prev_body->next = NULL;
-            body->next = NULL;              prev_body->next = NULL;
+            body->alive = false;
+            body->center.x = -500;
+            body->center.y = -500;
+            body->next = NULL;
+            body->next = NULL;
         }
 
-        snake_pl2_head = &snake_pl2[0];     prev_snake_pl2_head = &prev_snake_pl2[0];
-        snake_pl2_tail = snake_pl2_head;    prev_snake_pl2_tail = prev_snake_pl2_head;
+        snake_pl2_head = &snake_pl2[0];
+        snake_pl2_tail = snake_pl2_head;
+    }
+
+    // initialize center values to invalid MAPPED
+    // center values so erasing and drawing will happen
+    // during the first iteration.
+    for ( int i = 0; i < SN_SNAKE_MAX_LENGTH; i++ )
+    {
+        prevSnakes[player_num][i].center.x = -500;
+        prevSnakesSize[player_num] = 0;
+
+        bufferSnakes[player_num][i].center.x = -500;
+        bufferSnakesSize[player_num] = 0;
     }
 
     // set up the pointers correctly first
     game3_assignPointers( player_num );
 
     // then assign the new head, tail, next and previous
-    head->alive = true;                     prev_head->alive = true;
-    head->center = *head_and_tail;          prev_head->center = *head_and_tail;
-    head->next = head;                      prev_head->next = prev_head;
-    head->prev = head;                      prev_head->prev = prev_head;
+    head->alive = true;
+    head->center = *head_and_tail;
+    head->next = head;
+    head->prev = head;
 }
 
 // This function will adjust the head pointer
@@ -419,5 +421,62 @@ bool game3_compAt (int8_t index, int8_t player_num, comp_t comparison, comp_t ax
     }
 
     return isEqual;
+}
+
+// PREVIOUS ANALYSIS ---------------------------------------------
+
+// This function iterates through the whole previous
+// snake array for the player
+bool game3_iteratePrevSnakeCenters( point_t * center, int8_t player_num )
+{
+    // search through all previous snake center values
+    for (int i = 0; i < prevSnakesSize[player_num]; i++)
+    {
+        if ( prevSnakes[player_num][i].center.x == center->x
+                && prevSnakes[player_num][i].center.x != -500 )
+            return true;
+    }
+
+    return false;
+}
+
+// This function stores the new MAPPED center value at the requested
+// index of the snake buffer and increases the buffer size
+void game3_storeToSnakeCenterBuffer( point_t * center, int8_t index, int8_t player_num )
+{
+    bufferSnakes[player_num][index].center = *center;
+    bufferSnakesSize[player_num]++;
+}
+
+// This function resets the requested player number's snake buffer
+// with invalid center values and a size of 0
+void game3_resetSnakeBuffer( int8_t player_num )
+{
+    for (int i = 0; i < SN_SNAKE_MAX_LENGTH; i++ )
+    {
+        bufferSnakes[player_num][i].center.x = -500;
+    }
+
+    bufferSnakesSize[player_num] = 0;
+}
+
+// This function will transfer all the mapped center points to
+// the array of previous center points and sets the previous
+// array size to the center buffer size. Afterwards, it calls
+// game3_resetSnakeBuffer to reset the buffer center points and
+// size.
+void game3_transferBufferToPrev ( int8_t player_num )
+{
+    // transfer all elements
+    for (int i = 0; i < bufferSnakesSize[player_num]; i++)
+    {
+        prevSnakes[player_num][i].center = bufferSnakes[player_num][i].center;
+    }
+
+    // set the new size
+    prevSnakesSize[player_num] = bufferSnakesSize[player_num];
+
+    // reset the buffer
+    game3_resetSnakeBuffer(player_num);
 }
 
