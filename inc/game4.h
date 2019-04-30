@@ -16,35 +16,6 @@
 /*********************************************** Game Functions *********************************************************************/
 
 void game4_addHostThreads();    // called by the menu to initialize this game
-void game4_addClientThreads();  // called by the menu to initialize this game
-
-/*********************************************** Client Threads *********************************************************************/
-/*
- * Thread for client to join game
- */
-void game4_JoinGame();
-
-/*
- * Thread that receives game state packets from host
- */
-void game4_ReceiveDataFromHost();
-
-/*
- * Thread that sends UDP packets to host
- */
-void game4_SendDataToHost();
-
-/*
- * Thread to read client's joystick
- */
-void game4_ReadJoystickClient();
-
-/*
- * End of game for the client
- */
-void game4_EndOfGameClient();
-
-/*********************************************** Client Threads *********************************************************************/
 
 
 /*********************************************** Host Threads *********************************************************************/
@@ -56,12 +27,6 @@ void game4_CreateGame();
 /*
  * Thread that sends game state to client
  */
-void game4_SendDataToClient();
-
-/*
- * Thread that receives UDP packets from client
- */
-void game4_ReceiveDataFromClient();
 
 /*
  * Thread to read host's joystick
