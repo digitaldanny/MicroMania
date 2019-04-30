@@ -23,6 +23,7 @@ HostToClient_t packet_zipped;
 ClientToHost_t packet_ClientToHost;
 static uint8_t numPlayers;
 uint8_t turn = 0;
+int8_t first_run_handshake = 0;
 
 /*********************************************** Functions ********************************************************************/
 // opening menu to choose between host or client
@@ -164,24 +165,29 @@ void menu_MenuHost ( void )
     P2->DIR |= (BIT0 | BIT1 | BIT2); // set R.G.B direction
 
 #ifndef SINGLE
-    // PUT THIS IN A LOOP LATER ***************************************************
-    // HANDSHAKE HERE ----------------------------------------------
-    // 3. Try to receive packet from the client until return SUCCESS
-    while( ReceiveData((_u8*)&packet_HostToClient.client, sizeof(packet_HostToClient.client)) < 0 );
-
-    // 4. Acknowledge client to tell them they joined the game.
-    packet_HostToClient.client.joined = true;
-    packet_HostToClient.client.playerNumber = numPlayers;
-    numPlayers++;
-    SendData( (_u8*)&packet_HostToClient, packet_HostToClient.client.IP_address, sizeof(packet_HostToClient) );
-
-    // Wait for client to sync with host by acknowledging that
-    // it received the host message.
-    do
+    if (first_run_handshake == 0)
     {
-        ReceiveData((uint8_t*)&packet_HostToClient.client, sizeof(packet_HostToClient.client));
-    } while ( packet_HostToClient.client.acknowledge == false );
-    // HANDSHAKE HERE -----------------------------------------------
+        // PUT THIS IN A LOOP LATER ***************************************************
+        // HANDSHAKE HERE ----------------------------------------------
+        // 3. Try to receive packet from the client until return SUCCESS
+        while( ReceiveData((_u8*)&packet_HostToClient.client, sizeof(packet_HostToClient.client)) < 0 );
+
+        // 4. Acknowledge client to tell them they joined the game.
+        packet_HostToClient.client.joined = true;
+        packet_HostToClient.client.playerNumber = numPlayers;
+        numPlayers++;
+        SendData( (_u8*)&packet_HostToClient, packet_HostToClient.client.IP_address, sizeof(packet_HostToClient) );
+
+        // Wait for client to sync with host by acknowledging that
+        // it received the host message.
+        do
+        {
+            ReceiveData((uint8_t*)&packet_HostToClient.client, sizeof(packet_HostToClient.client));
+        } while ( packet_HostToClient.client.acknowledge == false );
+        // HANDSHAKE HERE -----------------------------------------------
+
+        first_run_handshake = 1;
+    }
 #endif
 
     RED_ON;
@@ -385,27 +391,32 @@ void menu_MenuClient ( void )
     packet_ClientToHost.joined = false;
     packet_ClientToHost.playerNumber = 0;   // reassigned by host
     packet_HostToClient.choice_made = false;
-
+    packet_zipped.choice_made = false;
     // hardware initializations
     common_buttons_init();
 
     P2->OUT &= ~(BIT0 | BIT1 | BIT2); // initialize led's off
     P2->DIR |= (BIT0 | BIT1 | BIT2); // set R.G.B direction
 
-    // HANDSHAKE HERE ----------------------------------------------
-    // wait for the host to receive message and notify
-    // client that they joined the game.
-    do
+    if (first_run_handshake == 0)
     {
-        SendData(       (uint8_t*)&packet_ClientToHost, HOST_IP_ADDR, sizeof(packet_ClientToHost) );   // start handshake
-        ReceiveData(    (uint8_t*)&packet_HostToClient, sizeof(packet_HostToClient) );   // check if host acknowledges
-    } while( packet_HostToClient.client.joined == false );
+        // HANDSHAKE HERE ----------------------------------------------
+        // wait for the host to receive message and notify
+        // client that they joined the game.
+        do
+        {
+            SendData(       (uint8_t*)&packet_ClientToHost, HOST_IP_ADDR, sizeof(packet_ClientToHost) );   // start handshake
+            ReceiveData(    (uint8_t*)&packet_HostToClient, sizeof(packet_HostToClient) );   // check if host acknowledges
+        } while( packet_HostToClient.client.joined == false );
 
-    // 4. Acknowledge client to tell them they have received
-    // the message about joining the game and the game can begin.
-    packet_ClientToHost.acknowledge = true;
-    SendData( (uint8_t*)&packet_ClientToHost, HOST_IP_ADDR, sizeof(packet_ClientToHost) );
-    // HANDSHAKE HERE -----------------------------------------------
+        // 4. Acknowledge client to tell them they have received
+        // the message about joining the game and the game can begin.
+        packet_ClientToHost.acknowledge = true;
+        SendData( (uint8_t*)&packet_ClientToHost, HOST_IP_ADDR, sizeof(packet_ClientToHost) );
+        // HANDSHAKE HERE -----------------------------------------------
+
+        first_run_handshake = 1;
+    }
 
     BLUE_ON;
 
@@ -466,6 +477,11 @@ void ExitMenuClient ( void )
     G8RTOS_InitSemaphore(&LCDREADY, 1);
     G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
 
+    packet_ClientToHost.acknowledge = false;
+    packet_ClientToHost.joined = false;
+    packet_HostToClient.client.joined = false;
+    packet_HostToClient.client.acknowledge = false;
+
     /*
     // use the particular game's gameX_addThreadsHost
     if ( packet_HostToClient.game_number == 0 )
@@ -492,6 +508,7 @@ void ExitMenuClient ( void )
         G8RTOS_AddThread(&Game2_JoinGame, 16, 0xFFFFFFFF, "JOIN_Dodge");
 
     packet_HostToClient.choice_made = false;
+    packet_zipped.choice_made = false;
 
     G8RTOS_KillSelf();
 }

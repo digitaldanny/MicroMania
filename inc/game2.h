@@ -13,9 +13,9 @@
 #include "common_threads.h"
 /*********************************************** Includes ********************************************************************/
 #define DEFAULT_PRIORITY    15
-#define MAX_NUM_OF_BALLS 15
+#define MAX_NUM_OF_BALLS 5
 #define MAX_NUM_OF_PLAYERS 2
-#define MAX_NUM_OF_SHROOMS 1
+#define MAX_NUM_OF_SHROOMS 0
 #define BALL_SIZE 3
 #define SHROOM_SIZE 12
 #define ARENA_MAX_X 320
@@ -28,7 +28,7 @@
 #define MAX_SHROOM_SPEED               3
 #define MIN_SHROOM_SPEED               1
 #define SHROOM_SLEEP_COUNT              5000
-#define LIVES 5
+#define LIVES 1
 #define BALL_GEN_SLEEP      200 // 10 second increments increasing linearly
 #define PLAYER_OFFSET 5
 #define JOYSTICK_BIAS_CLIENT 200
@@ -68,9 +68,9 @@ typedef struct
     int16_t currentCenterX;
     int16_t currentCenterY;
     uint8_t direction;
+    bool drawRight;
     uint16_t num_lives;
     uint16_t RunTime;
-    uint16_t color;
     bool kill;
 } Game2_GeneralPlayerInfo_t;
 /*
@@ -82,8 +82,6 @@ typedef struct
     int16_t currentCenterY;
     int16_t xvel;
     int16_t yvel;
-    uint16_t color;
-    bool moving;
     bool alive;
     bool kill;
 } Game2_Ball_t;
@@ -109,11 +107,8 @@ typedef struct
     Game2_GeneralPlayerInfo_t players[MAX_NUM_OF_PLAYERS];
     Game2_Ball_t balls[MAX_NUM_OF_BALLS];
     Game2_Shroom_t shroom[MAX_NUM_OF_SHROOMS];
-    uint16_t numberOfBalls;
     bool winner;
     bool gameDone;
-    uint8_t LEDScores[2];
-    uint8_t overallScores[2];
 } Game2_GameState_t;
 #pragma pack ( pop )
 
@@ -237,12 +232,12 @@ void Game2_UpdatePlayerStatus();
 
 void Game2_UpdatePlayerOnScreen(Game2_PrevPlayer_t * prevPlayerIn, Game2_GeneralPlayerInfo_t * outPlayer, int ID);
 
-void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * currentBall, uint16_t outColor);
+void Game2_UpdateBallOnScreen(Game2_PrevBall_t * previousBall, Game2_Ball_t * currentBall);
 
 void Game2_UpdateShroomOnScreen(Game2_PrevShroom_t * previousBall, Game2_Shroom_t * currentBall);
 
 
-void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, uint16_t color, int ID);
+void Game2_DrawPlayer(Game2_GeneralPlayerInfo_t * player, int ID);
 
 
 
