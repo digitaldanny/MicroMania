@@ -134,7 +134,7 @@ typedef struct
     game3_ClientToHost_t client;
     game3_Food_t new_food;
     game3_Player_t players[MAX_NUM_PLAYERS];
-
+    int8_t winner;
 } game3_HostToClient_t;
 
 /*********************************************** Game Functions *********************************************************************/
@@ -146,7 +146,7 @@ dir_t game3_oppositeDir ( dir_t dir );
 void game3_checkDeleteColor( point_t * center, dir_t * dir, int16_t * color );
 void game3_forceBorderTurn( point_t * center, int16_t * x_off, int16_t * y_off, dir_t * dir );
 void game3_updateBorders();
-void game3_refreshFood();
+point_t game3_spawnFood();
 void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t count, int16_t color);
 bool withinPlayerRange(point_t * objectCenter);
 void mapObjectToMe(point_t * objectCenter, point_t * mappedCenter);
@@ -201,6 +201,10 @@ void game3_ReceiveDataFromClient();
  */
 void game3_ReadJoystickHost();
 
+/*
+ *  Thread to update gamestate to be sent
+ *  back to the client.
+ */
 void game3_UpdateGamestateHost();
 
 /*

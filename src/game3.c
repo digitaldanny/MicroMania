@@ -1,4 +1,4 @@
-#define SINGLE
+#define MULTI
 
 /*
  *  menu.c
@@ -44,6 +44,7 @@ uint8_t game3_numPlayers;
 prev_player_t prevPlayers[MAX_NUM_PLAYERS];
 prev_Food_t prevFood[SN_MAX_FOOD_ON_MAP];
 game3_Food_t local_food[SN_MAX_FOOD_ON_MAP];
+int8_t foodCount;
 
 game3_Player_t * me;
 prev_player_t * my_prev;
@@ -290,28 +291,68 @@ void game3_forceBorderTurn( point_t * center, int16_t * x_off,
     }
 }
 
-// This function loops through all food structures and checks
-// if the food center received is equal to the current food.
-// If yes, generate a new center for that food and set the
-// received gamestate center to an invalid center (-1, -1)
-void game3_refreshFood()
+// This function will generate a new random food center
+// without colliding with other living food entities.
+point_t game3_spawnFood()
 {
-    game3_Food_t * food;
+    int16_t tempX;
+    int16_t tempY;
+    game3_Food_t * tempFoodPtr;
+    game3_Player_t * tempPlayerPtr;
 
-    for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+    // search for a center value that is not currently taken
+    while ( 1 )
     {
-        food = &local_food[i];
+        tempX = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_X - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_X + SN_FOOD_SIZE;
+        tempY = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_Y - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_Y + SN_FOOD_SIZE;
 
-        if ( food->center.x == game3_HostToClient.client.kill_food_center.x
-                && food->center.y == game3_HostToClient.client.kill_food_center.y )
+        // make sure the center does not match any of the
+        // current player centers
+        for (int i = 0; i < MAX_NUM_PLAYERS; i++)
         {
-            food->center.x = rand() % (SN_MAP_MAX_X + SN_FOOD_SIZE/2 + 1);
-            food->center.y = rand() % (SN_MAP_MAX_Y + SN_FOOD_SIZE/2 + 1);
-            food->kill = false;
-            food->alive = true;
-            break;  // only one piece of food can be eaten at a time
+            tempPlayerPtr = &game3_HostToClient.players[i];
+
+            // if X is between any center X positions OR if Y is between any
+            // center Y positions, regenerate
+            if (    (tempX < tempPlayerPtr->center.x - SN_FOOD_SPAWN_RANGE / 2
+                    && tempX > tempPlayerPtr->center.x + SN_FOOD_SPAWN_RANGE / 2)
+
+                                            ||
+
+                    (tempY < tempPlayerPtr->center.y - SN_FOOD_SPAWN_RANGE / 2
+                    && tempY > tempPlayerPtr->center.y + SN_FOOD_SPAWN_RANGE / 2)   )
+            {
+                continue; // don't spawn this iteration
+            }
         }
+
+        // make sure the center does not match any of the
+        // current food centers
+        for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+        {
+            tempFoodPtr = &local_food[i];
+
+            // if X is between any center X positions OR if Y is between any
+            // center Y positions, regenerate
+            if (    (tempX < tempFoodPtr->center.x - SN_FOOD_SPAWN_RANGE / 2
+                    && tempX > tempFoodPtr->center.x + SN_FOOD_SPAWN_RANGE / 2)
+
+                                            ||
+
+                    (tempY < tempFoodPtr->center.y - SN_FOOD_SPAWN_RANGE / 2
+                    && tempY > tempFoodPtr->center.y + SN_FOOD_SPAWN_RANGE / 2)   )
+            {
+                continue; // don't spawn this iteration
+            }
+        }
+
+        break; // exit the infinite loop because a valid food center has been found
     }
+
+    point_t random_point;
+    random_point.x = tempX;
+    random_point.y = tempY;
+    return random_point;
 }
 
 // This function checks if an object is within a predefined RANGE and returns
@@ -727,6 +768,13 @@ void game3_JoinGame()
     game3_ClientToHost.acknowledge = true;
     SendData( (uint8_t*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );
 
+    // initialize all food on client side
+    for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+    {
+        while ( ReceiveData(&game3_HostToClient, sizeof(game3_HostToClient)) < 0 );
+        local_food[i] = game3_HostToClient.new_food;
+    }
+
     // 4. If you've joined the game, acknowledge you've joined to the host
     //      and show connection through LED.
     BLUE_ON;
@@ -754,8 +802,8 @@ void game3_ReceiveDataFromHost()
         G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
 
         // 3. Check if the game is done. Add EndOfGameHost thread if done.
-        // if ( game3_HostToClient.choice_made == true )
-        //     G8RTOS_AddThread(ExitMenuClient, 0, 0xFFFFFFFF, "END_CLIENT_");
+        if ( game3_HostToClient.winner > 0 )
+            G8RTOS_AddThread(&game3_EndOfGameClient, 0, 0xFFFFFFFF, "END_CLIENT_");
 
         sleep(2);
     }
@@ -830,6 +878,7 @@ void game3_EndOfGameClient()
 
 
 /*********************************************** Host Threads *********************************************************************/
+
 /*
  * Thread for the host to create a game
  */
@@ -871,6 +920,7 @@ void game3_CreateGame()
     // but they are also the same number, so it will not write over a corner.
 
     // initialize all clients and host info here..
+    game3_HostToClient.winner = 0;
 
     for (int i = 0; i < MAX_NUM_PLAYERS; i++)
     {
@@ -899,75 +949,6 @@ void game3_CreateGame()
     game3_HostToClient.players[0].alive = true;
     game3_numPlayers++; // counting the host as the first player
 
-    // Initialize the food centers ----------------------------
-    game3_Food_t * food;
-    for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
-    {
-        food = &local_food[i];
-
-        int16_t tempX;
-        int16_t tempY;
-        game3_Food_t * tempFoodPtr;
-        game3_Player_t * tempPlayerPtr;
-
-        // search for a center value that is not currently taken
-        while ( 1 )
-        {
-            tempX = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_X - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_X + SN_FOOD_SIZE;
-            tempY = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_Y - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_Y + SN_FOOD_SIZE;
-
-            // make sure the center does not match any of the
-            // current player centers
-            for (int i = 0; i < MAX_NUM_PLAYERS; i++)
-            {
-                tempPlayerPtr = &game3_HostToClient.players[i];
-
-                // if X is between any center X positions OR if Y is between any
-                // center Y positions, regenerate
-                if (    (tempX < tempPlayerPtr->center.x - SN_FOOD_SPAWN_RANGE / 2
-                        && tempX > tempPlayerPtr->center.x + SN_FOOD_SPAWN_RANGE / 2)
-
-                                                ||
-
-                        (tempY < tempPlayerPtr->center.y - SN_FOOD_SPAWN_RANGE / 2
-                        && tempY > tempPlayerPtr->center.y + SN_FOOD_SPAWN_RANGE / 2)   )
-                {
-                    continue; // don't spawn this iteration
-                }
-            }
-
-            // make sure the center does not match any of the
-            // current food centers
-            for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
-            {
-                tempFoodPtr = &local_food[i];
-
-                // if X is between any center X positions OR if Y is between any
-                // center Y positions, regenerate
-                if (    (tempX < tempFoodPtr->center.x - SN_FOOD_SPAWN_RANGE / 2
-                        && tempX > tempFoodPtr->center.x + SN_FOOD_SPAWN_RANGE / 2)
-
-                                                ||
-
-                        (tempY < tempFoodPtr->center.y - SN_FOOD_SPAWN_RANGE / 2
-                        && tempY > tempFoodPtr->center.y + SN_FOOD_SPAWN_RANGE / 2)   )
-                {
-                    continue; // don't spawn this iteration
-                }
-            }
-
-            break; // exit the infinite loop because a valid food center has been found
-        }
-
-        // assign the new food values
-        food->center.x = tempX;
-        food->center.y = tempY;
-        food->kill = false;
-        food->alive = true;
-
-        // SEND THE NEW CENTER FOOD DATA TO CLIENTS ***************************
-    }
-
     RED_OFF;
 
 #ifndef SINGLE
@@ -989,6 +970,27 @@ void game3_CreateGame()
     } while ( game3_HostToClient.client.acknowledge == false );
     // HANDSHAKE HERE -----------------------------------------------
 #endif
+
+    // Initialize the food centers ----------------------------
+    game3_Food_t * food;
+    for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+    {
+        point_t newFoodCenter = game3_spawnFood();
+        foodCount++;
+
+        // assign the new food values to local food array
+        food = &local_food[i];
+        food->center.x = newFoodCenter.x;
+        food->center.y = newFoodCenter.y;
+        food->kill = false;
+        food->alive = true;
+
+        game3_HostToClient.new_food = *food;
+
+#ifndef SINGLE
+        SendData( (_u8*)&game3_HostToClient, game3_HostToClient.client.IP_address, sizeof(game3_HostToClient) );
+#endif
+    }
 
     LCD_Clear(SN_BG_COLOR);
     RED_ON;
@@ -1022,6 +1024,34 @@ void game3_UpdateGamestateHost()
         updateJoystickCount++;
 
         G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
+
+        // generate new food
+        // NOTE: Make sure gamestate is sent to client before
+        // generating second piece of food.
+        if ( foodCount < SN_MAX_FOOD_ON_MAP && game3_HostToClient.new_food.center.x == -500 )
+        {
+            game3_Food_t * tempFood;
+            point_t newFoodCenter = game3_spawnFood();
+            foodCount++;
+
+            // find a piece of food that is dead and assign it
+            // a new value
+            for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+            {
+                tempFood = &local_food[i];
+                if (tempFood->alive == false)
+                {
+                    tempFood->center.x = newFoodCenter.x;
+                    tempFood->center.y = newFoodCenter.y;
+                    tempFood->kill = false;
+                    tempFood->alive = true;
+
+                    game3_HostToClient.new_food = *tempFood;
+
+                    break;
+                }
+            }
+        }
 
         // GAMESTATE ADJUSTMENTS ----------------------------------
         if ( updateJoystickCount >= SN_UPDATE_PLAYER_POS )
@@ -1156,9 +1186,13 @@ void game3_SendDataToClient()
         SendData( (uint8_t*)&game3_HostToClient, game3_HostToClient.client.IP_address, sizeof(game3_HostToClient) );
         G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
 
+        // reset the new food center, so the updateGamestate thread can
+        // generate new food if it has too.
+        game3_HostToClient.new_food.center.x = -500;
+
         // Check if the game choice has been made. If yes, add those threads
-        // if ( game3_HostToClient.choice_made == true )
-        //     G8RTOS_AddThread(&ExitMenuHost, 0, 0xFFFFFFFF, "END_HOST");
+        if ( game3_HostToClient.winner > 0 )
+            G8RTOS_AddThread(&game3_EndOfGameHost, 0, 0xFFFFFFFF, "END_HOST");
 
         sleep(2);
     }
