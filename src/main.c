@@ -1,5 +1,5 @@
 #define MAIN
-#define MULTI
+#define SINGLE
 
 // To run game with different routers, go to the
 // cc3100_usage.h and sl_common.h header files and

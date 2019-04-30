@@ -1,4 +1,4 @@
-#define MULTI
+#define SINGLE
 
 /*
  *  menu.c
@@ -1256,6 +1256,7 @@ void game3_DrawObjects()
 
             player = &game3_HostToClient.players[i];
             prevPlayer = &prevPlayers[i];
+            point_t snakeBodyCenter;
 
             if ( player->alive )
             {
@@ -1287,11 +1288,18 @@ void game3_DrawObjects()
                     y_off = 0;
                 }
 
+                // determine the snake color based on the player number
+                int16_t color;
+                if ( i == 0 )       color = SN_PLAYER1_COLOR;
+                else if ( i == 1 )  color = SN_PLAYER2_COLOR;
+                else                color = SN_PLAYER3_COLOR;
+
                 // erase player's previous head position, only used for the other
                 // player's snake. If playing as host, the host's head will not ever
                 // be redraw because it is always on the center of the map. The enemy
                 // player's snake head WILL be redrawn because it should always be changing
                 // position.
+                // ERASE THE SNAKE HEAD ---------------------------------------------------
                 if ( withinPlayerRange(&prevMappedCenter)
                         && !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
@@ -1308,16 +1316,10 @@ void game3_DrawObjects()
                     G8RTOS_SignalSemaphore(&LCDREADY);
                 }
 
+                // REDRAW THE SNAKE HEAD ------------------------------------------------------
                 if ( withinPlayerRange(&mappedCenter) )
                 {
-                    // determine the snake color based on the player number
-                    int16_t color;
-                    if ( i == 0 )       color = SN_PLAYER1_COLOR;
-                    else if ( i == 1 )  color = SN_PLAYER2_COLOR;
-                    else                color = SN_PLAYER3_COLOR;
-
                     // play the next frame of the snake head animation
-                    point_t snakeBodyCenter;
                     if ( mappedCenter.x > 0 && mappedCenter.y > 0 )
                     {
                         G8RTOS_WaitSemaphore(&LCDREADY);
@@ -1328,96 +1330,12 @@ void game3_DrawObjects()
                                             player->animation_count,
                                             color);
                         G8RTOS_SignalSemaphore(&LCDREADY);
-
-                        // update each part of the snake's body relative
-                        // to the current snake head
-                        for (int j = 0; j < game3_snakeLength(i); j++)
-                        {
-                            // always skip the head
-                            if ( j == 0 )
-                                continue;
-
-                            // erase the previous snake body information
-                            // if the player has moved
-                            snakeBodyCenter = game3_snakeAt(j, i);
-                            mapObjectToPrev(0, &snakeBodyCenter, &prevMappedBodyCenter);
-
-                            // draw the new snake body information if the player
-                            mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
-
-                            // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
-                            // ************************************************
-                            do_delete = true;
-                            do_draw = true;
-
-                            // read the currently mapped LCD value..
-                            // if the color matches the player color, do not
-                            // erase OR redraw
-                            // if ( player->dir == LEFT )
-                            // {
-                            //     if ( LCD_GetPoint(mappedBodyCenter.x, mappedBodyCenter.y) == color)
-                            //     {
-                            //         do_draw = false;
-                            //
-                            //         if ( game3_compAt(j, i, PREV, Y) )
-                            //             do_delete = false;
-                            //     }
-                            // }
-
-                            // Read the mapped center value
-                            // ************************************************
-                            // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
-
-                            // Only erase the snake body if the center data is
-                            // valid information ( NOT -500, -500 )
-                            if ( withinPlayerRange(&prevMappedBodyCenter)
-                                    && !(mappedCenter.x == prevMappedBodyCenter.x && mappedCenter.y == prevMappedBodyCenter.y)
-                                    && snakeBodyCenter.x != -500 && snakeBodyCenter.y != -500
-                                    && do_delete == true )
-                            {
-
-                                int16_t delete_color = SN_BG_COLOR;
-                                game3_checkDeleteColor(&snakeBodyCenter, &player->dir, &delete_color);
-
-                                G8RTOS_WaitSemaphore(&LCDREADY);
-                                LCD_DrawRectangle(prevMappedBodyCenter.x - SN_SNAKE_SIZE / 2,
-                                                  prevMappedBodyCenter.x + SN_SNAKE_SIZE / 2,
-                                                  prevMappedBodyCenter.y - SN_SNAKE_SIZE / 2,
-                                                  prevMappedBodyCenter.y + SN_SNAKE_SIZE / 2,
-                                                  delete_color);
-                                G8RTOS_SignalSemaphore(&LCDREADY);
-                            }
-
-                            /*
-                            // DEBUGGING *********
-                            if ( j == 1 )
-                                color = LCD_RED;
-                            else if ( j == 2 )
-                                color = LCD_PURPLE;
-                            else if ( j == 3 )
-                                color = LCD_BLUE;
-                            else if ( j == 4 )
-                                color = LCD_PINK;
-                            // DEBUGGING **********
-                             */
-
-                            if ( withinPlayerRange(&mappedBodyCenter)
-                                    // && !(mappedCenter.x == mappedBodyCenter.x && mappedCenter.y == mappedBodyCenter.y)
-                                    && do_draw == true )
-                            {
-                                G8RTOS_WaitSemaphore(&LCDREADY);
-                                LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
-                                                  mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
-                                                  mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
-                                                  mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
-                                                  color);
-                                G8RTOS_SignalSemaphore(&LCDREADY);
-                            }
-                        }
                     }
                 }
+
                 // if the current snake is not within the screen, erase the previous one because it is
                 // currently off screen and the previous needs to be deleted.
+                // ERASE OFFSCREEN DATA -------------------------------------------------------------
                 else if ( !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
                     int16_t delete;
@@ -1439,6 +1357,83 @@ void game3_DrawObjects()
                     }
                 }
 
+                // ERASE SNAKE BODY ---------------------------------------------------------
+
+
+                // REDRAW SNAKE BODY --------------------------------------------------------
+                for (int j = 0; j < game3_snakeLength(i); j++)
+                {
+                    snakeBodyCenter = game3_snakeAt(j, i);
+                    mapObjectToPrev(0, &snakeBodyCenter, &prevMappedBodyCenter);
+                    mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
+
+                    // store mapped center to the snake buffer for this player
+                    game3_storeToSnakeCenterBuffer(&mappedBodyCenter, j, i);
+
+                    // always skip the head
+                    if ( j == 0 )
+                        continue;
+
+                    // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
+                    // ************************************************
+                    bool not_erase = false;
+                    bool not_draw = false;
+
+                    // iterate through all previous snake centers and determine
+                    // if the snake was located here in a previous iteration.
+                    // not_erase = game3_iteratePrevSnakeCenters( &prevMappedBodyCenter, i );  // erasing
+                    // not_draw = game3_iteratePrevSnakeCenters( &mappedBodyCenter, i );       // drawing
+
+                    // ************************************************
+                    // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
+
+                    // Only erase the snake body if the center data is
+                    // valid information ( NOT -500, -500 )
+                    if ( withinPlayerRange(&prevMappedBodyCenter)
+                            && !(mappedCenter.x == prevMappedBodyCenter.x && mappedCenter.y == prevMappedBodyCenter.y)
+                            && snakeBodyCenter.x != -500 && snakeBodyCenter.y != -500
+                            && !not_erase )
+                    {
+
+                        int16_t delete_color = SN_BG_COLOR;
+                        game3_checkDeleteColor(&snakeBodyCenter, &player->dir, &delete_color);
+
+                        G8RTOS_WaitSemaphore(&LCDREADY);
+                        LCD_DrawRectangle(prevMappedBodyCenter.x - SN_SNAKE_SIZE / 2,
+                                          prevMappedBodyCenter.x + SN_SNAKE_SIZE / 2,
+                                          prevMappedBodyCenter.y - SN_SNAKE_SIZE / 2,
+                                          prevMappedBodyCenter.y + SN_SNAKE_SIZE / 2,
+                                          LCD_PINK); //delete_color);
+                        G8RTOS_SignalSemaphore(&LCDREADY);
+                    }
+
+                    /*
+                    // DEBUGGING *********
+                    if ( j == 1 )
+                        color = LCD_RED;
+                    else if ( j == 2 )
+                        color = LCD_PURPLE;
+                    else if ( j == 3 )
+                        color = LCD_BLUE;
+                    else if ( j == 4 )
+                        color = LCD_PINK;
+                    // DEBUGGING **********
+                     */
+
+                    if ( withinPlayerRange(&mappedBodyCenter)
+                            // && !not_draw
+                            )
+                    {
+                        G8RTOS_WaitSemaphore(&LCDREADY);
+                        LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
+                                      mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
+                                      mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
+                                      mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
+                                      color);
+                        G8RTOS_SignalSemaphore(&LCDREADY);
+                    }
+                }
+
                 // update the player's animation count so the snake's eyes
                 // will open and close. If the count exceeds the animation
                 // count, reset the count so the animation can loop.
@@ -1450,6 +1445,7 @@ void game3_DrawObjects()
 
             prevPlayers[i].center = player->center;
             prevPlayers[i].dir = player->dir;
+            game3_transferBufferToPrev(i);
         }
 
         /*

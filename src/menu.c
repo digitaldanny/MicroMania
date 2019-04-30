@@ -1,4 +1,4 @@
-#define MULTI
+#define SINGLE
 
 /*
  *  menu.c
