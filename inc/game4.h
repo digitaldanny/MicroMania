@@ -12,6 +12,100 @@
 #include "math.h"
 #include "common_threads.h"
 /*********************************************** Includes ********************************************************************/
+*
+ * Struct to be sent from the client to the host
+ */
+typedef struct
+{
+    uint32_t IP_address;
+    int8_t displacementX;
+    int8_t displacementY;
+    uint8_t playerNumber;
+    uint8_t direction;
+    bool ready;
+    bool joined;
+    bool acknowledge;
+} Game2_SpecificPlayerInfo_t;
+
+/*
+ * General player info to be used by both host and client
+ * Client responsible for translation
+ */
+typedef struct
+{
+    int16_t currentCenterX;
+    int16_t currentCenterY;
+    uint8_t direction;
+    bool drawRight;
+    uint16_t num_lives;
+    uint16_t RunTime;
+    bool kill;
+} Game2_GeneralPlayerInfo_t;
+/*
+ * Struct of all the balls, only changed by the host
+ */
+typedef struct
+{
+    int16_t currentCenterX;
+    int16_t currentCenterY;
+    int16_t xvel;
+    int16_t yvel;
+    bool alive;
+    bool kill;
+} Game2_Ball_t;
+/*
+ * Struct of all the balls, only changed by the host
+ */
+typedef struct
+{
+    int16_t currentCenterX;
+    int16_t currentCenterY;
+    int16_t xvel;
+    int16_t yvel;
+    bool alive;
+    bool kill;
+} Game2_Shroom_t;
+
+/*
+ * Struct to be sent from the host to the client
+ */
+typedef struct
+{
+    Game2_SpecificPlayerInfo_t player;
+    Game2_GeneralPlayerInfo_t players[MAX_NUM_OF_PLAYERS];
+    Game2_Ball_t balls[MAX_NUM_OF_BALLS];
+    Game2_Shroom_t shroom[MAX_NUM_OF_SHROOMS];
+    bool winner;
+    bool gameDone;
+} Game2_GameState_t;
+#pragma pack ( pop )
+
+/*
+ * Struct of all the previous ball locations, only changed by self for drawing!
+ */
+typedef struct
+{
+    int16_t CenterX;
+    int16_t CenterY;
+}Game2_PrevBall_t;
+
+/*
+ * Struct of all the previous players locations, only changed by self for drawing
+ */
+typedef struct
+{
+    int16_t CenterX;
+    int16_t CenterY;
+}Game2_PrevPlayer_t;
+
+/*
+ * Struct of all the previous players locations, only changed by self for drawing
+ */
+typedef struct
+{
+    int16_t CenterX;
+    int16_t CenterY;
+}Game2_PrevShroom_t;
 
 /*********************************************** Game Functions *********************************************************************/
 
