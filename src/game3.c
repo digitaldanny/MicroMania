@@ -1,4 +1,4 @@
-#define MULTI
+#define SINGLE
 
 /*
  *  menu.c
@@ -307,7 +307,7 @@ point_t game3_spawnFood()
         tempY = SN_FOOD_SIZE * (rand() % ((SN_MAP_MAX_Y - SN_FOOD_SIZE)/SN_FOOD_SIZE)) + SN_MAP_MIN_Y + SN_FOOD_SIZE;
 
         // make sure the center does not match any of the
-        // current player centers
+        // current player body locations
         for (int i = 0; i < MAX_NUM_PLAYERS; i++)
         {
             tempPlayerPtr = &game3_HostToClient.players[i];
@@ -1028,7 +1028,7 @@ void game3_UpdateGamestateHost()
         // generate new food
         // NOTE: Make sure gamestate is sent to client before
         // generating second piece of food.
-        if ( foodCount < SN_MAX_FOOD_ON_MAP && game3_HostToClient.new_food.center.x == -500 )
+        if ( foodCount < SN_MAX_FOOD_ON_MAP ) // && game3_HostToClient.new_food.center.x == -500 )
         {
             game3_Food_t * tempFood;
             point_t newFoodCenter = game3_spawnFood();
@@ -1039,7 +1039,7 @@ void game3_UpdateGamestateHost()
             for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
             {
                 tempFood = &local_food[i];
-                if (tempFood->alive == false)
+                if (tempFood->alive == false && tempFood->kill == false)
                 {
                     tempFood->center.x = newFoodCenter.x;
                     tempFood->center.y = newFoodCenter.y;
@@ -1134,7 +1134,31 @@ void game3_UpdateGamestateHost()
                 game3_HostToClient.players[1].center.y = SN_MAP_MIN_Y; // SN_SNAKE_SIZE / 2;
             }
 
-            // DEBUGGGGGGGGGGGG ****************************************************
+            // Check if any players collided with food on the map
+            for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+            {
+                game3_Food_t * tempFood = &local_food[i];
+
+                for (int j = 0; j < MAX_NUM_PLAYERS; j++)
+                {
+                    game3_Player_t * tempPlayer = &game3_HostToClient.players[j];
+
+                    // check if the player collided with the food.
+                    // Kill the food and increase size of the player if true.
+                    if ( tempFood->alive == true )
+                    {
+                        if ( tempFood->center.x == tempPlayer->center.x
+                                && tempFood->center.y == tempPlayer->center.y )
+                        {
+                            tempFood->kill = true;
+                            tempFood->alive = false;
+                            tempPlayer->size_up = true;
+                            foodCount--;
+                        }
+                    }
+                }
+            }
+
             game3_HostToClient.players[0].size_up = true;
 
             // add the new center value to the player snake and remove
@@ -1160,6 +1184,11 @@ void game3_UpdateGamestateHost()
                 }
 
                 G8RTOS_SignalSemaphore(&LCDREADY);
+            }
+            else
+            {
+                // make sure the player only increases in size once per food
+                game3_HostToClient.players[0].size_up = false;
             }
 
             game3_addSnakeHead(&me->center, 0);
@@ -1269,6 +1298,9 @@ void game3_DrawObjects()
     prev_player_t * prevPlayer;
     game3_Food_t * food;
 
+    int16_t x_off;
+    int16_t y_off;
+
     for ( int i = 0; i < SN_MAX_FOOD_ON_MAP; i++ )
     {
         prevFood[i].center.x = -1;
@@ -1277,6 +1309,29 @@ void game3_DrawObjects()
 
     while(1)
     {
+
+        // Solves offset required to delete the previous snake head
+        if ( me->dir == UP )
+        {
+            x_off = 0;
+            y_off = -1;
+        }
+        else if ( me->dir == DOWN )
+        {
+            x_off = 0;
+            y_off = 1;
+        }
+        else if ( me->dir == RIGHT )
+        {
+            x_off = 1;
+            y_off = 0;
+        }
+        else if ( me->dir == LEFT )
+        {
+            x_off = -1;
+            y_off = 0;
+        }
+
         /*
          * ======================================================
          * =                                                    =
@@ -1297,30 +1352,6 @@ void game3_DrawObjects()
                 // Update each player based on their center relative to "me" center
                 mapObjectToMe(&player->center, &mappedCenter);
                 mapObjectToPrev(0, &prevPlayer->center, &prevMappedCenter);
-
-                // Solves offset required to delete the previous snake head
-                int16_t x_off;
-                int16_t y_off;
-                if ( me->dir == UP )
-                {
-                    x_off = 0;
-                    y_off = -1;
-                }
-                else if ( me->dir == DOWN )
-                {
-                    x_off = 0;
-                    y_off = 1;
-                }
-                else if ( me->dir == RIGHT )
-                {
-                    x_off = 1;
-                    y_off = 0;
-                }
-                else if ( me->dir == LEFT )
-                {
-                    x_off = -1;
-                    y_off = 0;
-                }
 
                 // determine the snake color based on the player number
                 int16_t color;
@@ -1461,7 +1492,6 @@ void game3_DrawObjects()
                     // iterate through all CURRENT snake centers and determine
                     // if the snake was located here in a previous iteration.
                     not_erase = game3_iterateCurrentSnakeCenters( &prevMappedBodyCenter, i );  // erasing
-
                     // ************************************************
                     // ALGORITHM TO ERASE REQUIRED BLOCKS GOES HERE!!!
 
@@ -1487,7 +1517,7 @@ void game3_DrawObjects()
                 }
 
                 // update the player's animation count so the snake's eyes
-                // will open and close. If the count exceeds the animation
+                // will open and close. If the count exceeds the ani......hi mation
                 // count, reset the count so the animation can loop.
                 player->animation_count++;
                 if ( player->animation_count >= SN_SNAKE_FRAME_7 )
@@ -1528,7 +1558,6 @@ void game3_DrawObjects()
                 {
 
                     // erase the old position if this is not an initialization
-                    // if ( (prevFood->center.x != -500) && (prevFood->center.y != -500) )
                     if ( withinPlayerRange(&prevFood[i].center) )
                     {
                         G8RTOS_WaitSemaphore(&LCDREADY);
@@ -1575,27 +1604,21 @@ void game3_DrawObjects()
             }
 
             // THE FOOD WAS EATEN
-            // else if ( !food->alive && food->kill && withinPlayerRange(&food->center))
-            // {
-            //     mapObjectToMe(&prevFood[i].center, &mappedCenter);
-            //
-            //     prevFood[i].center.x = -1;
-            //     prevFood[i].center.y = -1;
-            //     food->kill = false;
-            //
-            //     LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-            //                       mappedCenter.x + SN_FOOD_SIZE / 2,
-            //                       mappedCenter.y - SN_FOOD_SIZE / 2,
-            //                       mappedCenter.y + SN_FOOD_SIZE / 2,
-            //                       SN_BG_COLOR);
-            // }
+            else if ( !food->alive && food->kill && withinPlayerRange(&food->center))
+            {
+                // mapObjectToMe(&prevFood[i].center, &mappedCenter);
+                mapObjectToMe(&food->center, &mappedCenter);
 
-            // // SPAWN NEW FOOD *****************************************8
-            // else if ( !food->alive && !food->kill )
-            // {
-            //     // game3_refreshFood();
-            // }
+                prevFood[i].center.x = -1;
+                prevFood[i].center.y = -1;
+                food->kill = false;
 
+                LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
+                                  mappedCenter.x + SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
+                                  mappedCenter.y - SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
+                                  mappedCenter.y + SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
+                                  SN_BG_COLOR);
+            }
         }
 
         /*
