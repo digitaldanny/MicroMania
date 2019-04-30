@@ -106,4 +106,10 @@ void game3_resetSnakeBuffer( int8_t player_num );
 // size.
 void game3_transferBufferToPrev (int8_t player_num);
 
+// CURRENT ANALYSIS -----------------------
+
+// This function iterates through the whole current
+// snake array buffer for the player
+bool game3_iterateCurrentSnakeCenters( point_t * center, int8_t player_num );
+
 #endif /* INC_GAME3_SNAKE_FUNCTIONS_H_ */

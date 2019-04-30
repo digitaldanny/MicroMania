@@ -433,7 +433,7 @@ bool game3_iteratePrevSnakeCenters( point_t * center, int8_t player_num )
     for (int i = 0; i < prevSnakesSize[player_num]; i++)
     {
         if ( prevSnakes[player_num][i].center.x == center->x
-                && prevSnakes[player_num][i].center.x != -500 )
+                && prevSnakes[player_num][i].center.y == center->y )
             return true;
     }
 
@@ -480,3 +480,19 @@ void game3_transferBufferToPrev ( int8_t player_num )
     game3_resetSnakeBuffer(player_num);
 }
 
+// CURRENT ANALYSIS --------------------------------------
+
+// This function iterates through the whole current
+// snake array buffer for the player
+bool game3_iterateCurrentSnakeCenters( point_t * center, int8_t player_num )
+{
+    // search through all previous snake center values
+    for (int i = 0; i < bufferSnakesSize[player_num]; i++)
+    {
+        if ( bufferSnakes[player_num][i].center.x == center->x
+                && bufferSnakes[player_num][i].center.y == center->y )
+            return true;
+    }
+
+    return false;
+}
