@@ -1299,7 +1299,11 @@ void game3_DrawObjects()
                 // be redraw because it is always on the center of the map. The enemy
                 // player's snake head WILL be redrawn because it should always be changing
                 // position.
-                // ERASE THE SNAKE HEAD ---------------------------------------------------
+                // ========================================================
+                // =                                                      =
+                // =                   ERASE SNAKE HEAD                   =
+                // =                                                      =
+                // ========================================================
                 if ( withinPlayerRange(&prevMappedCenter)
                         && !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
@@ -1316,7 +1320,11 @@ void game3_DrawObjects()
                     G8RTOS_SignalSemaphore(&LCDREADY);
                 }
 
-                // REDRAW THE SNAKE HEAD ------------------------------------------------------
+                // ========================================================
+                // =                                                      =
+                // =                  REDRAW SNAKE HEAD                   =
+                // =                                                      =
+                // ========================================================
                 if ( withinPlayerRange(&mappedCenter) )
                 {
                     // play the next frame of the snake head animation
@@ -1335,7 +1343,11 @@ void game3_DrawObjects()
 
                 // if the current snake is not within the screen, erase the previous one because it is
                 // currently off screen and the previous needs to be deleted.
-                // ERASE OFFSCREEN DATA -------------------------------------------------------------
+                // ========================================================
+                // =                                                      =
+                // =                   ERASE OFF SCREEN                   =
+                // =                                                      =
+                // ========================================================
                 else if ( !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
                     int16_t delete;
@@ -1357,35 +1369,67 @@ void game3_DrawObjects()
                     }
                 }
 
-                // ERASE SNAKE BODY ---------------------------------------------------------
-
-
-                // REDRAW SNAKE BODY --------------------------------------------------------
+                // ========================================================
+                // =                                                      =
+                // =                  REDRAW SNAKE BODY                   =
+                // =                                                      =
+                // ========================================================
                 for (int j = 0; j < game3_snakeLength(i); j++)
                 {
                     snakeBodyCenter = game3_snakeAt(j, i);
-                    mapObjectToPrev(0, &snakeBodyCenter, &prevMappedBodyCenter);
                     mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
 
                     // store mapped center to the snake buffer for this player
                     game3_storeToSnakeCenterBuffer(&mappedBodyCenter, j, i);
 
-                    // always skip the head
+                    // always skip the head for drawing.. storing data
+                    // is required above though
                     if ( j == 0 )
                         continue;
 
                     // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
                     // ************************************************
-                    bool not_erase = false;
                     bool not_draw = false;
 
                     // iterate through all previous snake centers and determine
                     // if the snake was located here in a previous iteration.
-                    // not_erase = game3_iteratePrevSnakeCenters( &prevMappedBodyCenter, i );  // erasing
                     // not_draw = game3_iteratePrevSnakeCenters( &mappedBodyCenter, i );       // drawing
 
                     // ************************************************
                     // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
+
+                    if ( withinPlayerRange(&mappedBodyCenter) && !not_draw )
+                    {
+                        G8RTOS_WaitSemaphore(&LCDREADY);
+                        LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
+                                      mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
+                                      mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
+                                      mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
+                                      color);
+                        G8RTOS_SignalSemaphore(&LCDREADY);
+                    }
+                }
+
+                // ========================================================
+                // =                                                      =
+                // =                   ERASE SNAKE BODY                   =
+                // =                                                      =
+                // ========================================================
+                for (int j = 1; j < game3_snakeLength(i); j++)
+                {
+                    snakeBodyCenter = game3_snakeAt(j, i);
+                    mapObjectToPrev(0, &snakeBodyCenter, &prevMappedBodyCenter);
+
+                    // ALGORITHM TO ERASE REQUIRED BLOCKS GOES HERE!!!
+                    // ************************************************
+                    bool not_erase = false;
+
+                    // iterate through all CURRENT snake centers and determine
+                    // if the snake was located here in a previous iteration.
+                    not_erase = game3_iterateCurrentSnakeCenters( &prevMappedBodyCenter, i );  // erasing
+
+                    // ************************************************
+                    // ALGORITHM TO ERASE REQUIRED BLOCKS GOES HERE!!!
 
                     // Only erase the snake body if the center data is
                     // valid information ( NOT -500, -500 )
@@ -1403,33 +1447,7 @@ void game3_DrawObjects()
                                           prevMappedBodyCenter.x + SN_SNAKE_SIZE / 2,
                                           prevMappedBodyCenter.y - SN_SNAKE_SIZE / 2,
                                           prevMappedBodyCenter.y + SN_SNAKE_SIZE / 2,
-                                          LCD_PINK); //delete_color);
-                        G8RTOS_SignalSemaphore(&LCDREADY);
-                    }
-
-                    /*
-                    // DEBUGGING *********
-                    if ( j == 1 )
-                        color = LCD_RED;
-                    else if ( j == 2 )
-                        color = LCD_PURPLE;
-                    else if ( j == 3 )
-                        color = LCD_BLUE;
-                    else if ( j == 4 )
-                        color = LCD_PINK;
-                    // DEBUGGING **********
-                     */
-
-                    if ( withinPlayerRange(&mappedBodyCenter)
-                            // && !not_draw
-                            )
-                    {
-                        G8RTOS_WaitSemaphore(&LCDREADY);
-                        LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
-                                      mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
-                                      mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
-                                      mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
-                                      color);
+                                          delete_color);
                         G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
@@ -1445,6 +1463,10 @@ void game3_DrawObjects()
 
             prevPlayers[i].center = player->center;
             prevPlayers[i].dir = player->dir;
+
+            // Transfer the current centers array into the previous centers
+            // array and reset the current centers array, so it can be generated
+            // again on the next loop.
             game3_transferBufferToPrev(i);
         }
 
