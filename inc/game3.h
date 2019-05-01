@@ -147,6 +147,8 @@ void game3_checkDeleteColor( point_t * center, dir_t * dir, int16_t * color );
 void game3_forceBorderTurn( point_t * center, int16_t * x_off, int16_t * y_off, dir_t * dir );
 void game3_updateBorders();
 point_t game3_spawnFood();
+void game3_drawApple( int16_t x, int16_t y );
+void game3_drawSnakeBody(dir_t dir, int16_t x, int16_t y, int16_t color);
 void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t count, int16_t color);
 bool withinPlayerRange(point_t * objectCenter);
 void mapObjectToMe(point_t * objectCenter, point_t * mappedCenter);

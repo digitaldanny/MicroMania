@@ -537,6 +537,61 @@ void game3_drawSnakeHead(dir_t prevDir, dir_t dir, int16_t x, int16_t y, int8_t 
     }
 }
 
+// This function draws the snake head animation with an increment value
+// that should be sent between gamestates. This function will only redraw
+// for every frame if drawing for the enemy player.
+void game3_drawSnakeBody(dir_t dir, int16_t x, int16_t y, int16_t color)
+{
+    int16_t secondary;
+
+    if ( color == LCD_GREEN )
+        secondary = LCD_OLIVE;
+    else
+        secondary = LCD_RED;
+
+    // Base box
+    LCD_DrawRectangle(x - SN_SNAKE_SIZE / 2,
+                      x + SN_SNAKE_SIZE / 2,
+                      y - SN_SNAKE_SIZE / 2,
+                      y + SN_SNAKE_SIZE / 2,
+                      color);
+}
+
+void game3_drawApple( int16_t x, int16_t y )
+{
+    LCD_DrawRectangle(x - 2,
+                      x + 2,
+                      y - 3,
+                      y + 4,
+                      LCD_YELLOW);
+
+    LCD_DrawRectangle(x - 3,
+                      x + 0,
+                      y - 2,
+                      y + 3,
+                      LCD_RED);
+
+    LCD_DrawRectangle(x - 2,
+                      x + 2,
+                      y + 1,
+                      y + 4,
+                      LCD_RED);
+
+    LCD_DrawRectangle(x + 3,
+                      x + 3,
+                      y + 0,
+                      y + 3,
+                      LCD_RED);
+
+    LCD_SetPoint(x - 1, y + 5, LCD_RED);
+    LCD_SetPoint(x + 1, y + 5, LCD_RED);
+
+    // stem (replace with brown instead of black)
+    LCD_SetPoint(x, y - 4, LCD_BROWN);
+    LCD_SetPoint(x, y - 5, LCD_BROWN);
+    LCD_SetPoint(x + 1, y - 5, LCD_BROWN);
+}
+
 // This function draws all the map borders based on the size of the
 // predefined max and min sizes
 void game3_updateBorders()
@@ -1446,6 +1501,10 @@ void game3_DrawObjects()
                     snakeBodyCenter = game3_snakeAt(j, i);
                     mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
 
+                    mapObjectToPrev(0, &snakeBodyCenter, &prevMappedBodyCenter);
+                    bool not_erase = false;
+                    not_erase = game3_iterateCurrentSnakeCenters( &prevMappedBodyCenter, i );  // erasing
+
                     // store mapped center to the snake buffer for this player
                     game3_storeToSnakeCenterBuffer(&mappedBodyCenter, j, i);
 
@@ -1460,12 +1519,12 @@ void game3_DrawObjects()
 
                     // iterate through all previous snake centers and determine
                     // if the snake was located here in a previous iteration.
-                    // not_draw = game3_iteratePrevSnakeCenters( &mappedBodyCenter, i );       // drawing
+                    not_draw = game3_iteratePrevSnakeCenters( &mappedBodyCenter, i );       // drawing
 
                     // ************************************************
                     // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
 
-                    if ( withinPlayerRange(&mappedBodyCenter) && !not_draw )
+                    if ( withinPlayerRange(&mappedBodyCenter) && (!not_draw || !not_erase) )
                     {
                         G8RTOS_WaitSemaphore(&LCDREADY);
                         LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
@@ -1573,11 +1632,7 @@ void game3_DrawObjects()
 
                     // draw the new position
                     G8RTOS_WaitSemaphore(&LCDREADY);
-                    LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-                                      mappedCenter.x + SN_FOOD_SIZE / 2,
-                                      mappedCenter.y - SN_FOOD_SIZE / 2,
-                                      mappedCenter.y + SN_FOOD_SIZE / 2,
-                                      SN_FOOD_COLOR);
+                    game3_drawApple( mappedCenter.x, mappedCenter.y );
                     G8RTOS_SignalSemaphore(&LCDREADY);
 
                     // update the previous array so it cannot be forgotten for erase
@@ -1638,6 +1693,6 @@ void game3_DrawObjects()
         // reassign the local player's center to be used in border updates next cycle
         // my_prev->center = me->center;
 
-        sleep(20);
+        sleep(30);
     }
 }
