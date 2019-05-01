@@ -117,6 +117,7 @@
 #define LCD_ORANGE         0xFD20
 #define LCD_PINK           0xfdba
 #define LCD_OLIVE          0xdfe4
+#define LCD_BROWN          0x9304
 #define LCD_BG             LCD_WHITE
 
 /* ILI 9325 registers definition */
