@@ -13,6 +13,7 @@
 #include "math.h"
 #include "common_threads.h"
 #include "game3_snake_functions.h"
+#include "menu.h"
 /*********************************************** Includes ********************************************************************/
 
 // SEMAPHORES -----------------------

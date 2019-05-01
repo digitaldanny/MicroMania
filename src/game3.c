@@ -1,4 +1,4 @@
-#define SINGLE
+#define MULTI
 
 /*
  *  menu.c
@@ -317,13 +317,13 @@ point_t game3_spawnFood()
             {
                 // if X is between any center X positions OR if Y is between any
                 // center Y positions, regenerate
-                if (    (tempX < game3_snakeAt(i, j).x - SN_FOOD_SPAWN_RANGE / 2
-                        && tempX > game3_snakeAt(i, j).x + SN_FOOD_SPAWN_RANGE / 2)
+                if (    (tempX > game3_snakeAt(i, j).x - SN_FOOD_SPAWN_RANGE / 2
+                        && tempX < game3_snakeAt(i, j).x + SN_FOOD_SPAWN_RANGE / 2)
 
                                                 ||
 
-                        (tempY < game3_snakeAt(i, j).y - SN_FOOD_SPAWN_RANGE / 2
-                        && tempY > game3_snakeAt(i, j).y + SN_FOOD_SPAWN_RANGE / 2)   )
+                        (tempY > game3_snakeAt(i, j).y - SN_FOOD_SPAWN_RANGE / 2
+                        && tempY < game3_snakeAt(i, j).y + SN_FOOD_SPAWN_RANGE / 2)   )
                 {
                     continue; // don't spawn this iteration
                 }
@@ -816,23 +816,23 @@ void game3_JoinGame()
 
     // wait for the host to receive message and notify
     // client that they joined the game.
-    do
-    {
-        SendData(       (uint8_t*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );   // start handshake
-        ReceiveData(    (uint8_t*)&game3_HostToClient, sizeof(game3_HostToClient) );   // check if host acknowledges
-    } while( game3_HostToClient.client.joined == false );
-
-    // 4. Acknowledge client to tell them they have received
-    // the message about joining the game and the game can begin.
-    game3_ClientToHost.acknowledge = true;
-    SendData( (uint8_t*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );
-
-    // initialize all food on client side
-    for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
-    {
-        while ( ReceiveData(&game3_HostToClient, sizeof(game3_HostToClient)) < 0 );
-        local_food[i] = game3_HostToClient.new_food;
-    }
+    // do
+    // {
+    //     SendData(       (uint8_t*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );   // start handshake
+    //     ReceiveData(    (uint8_t*)&game3_HostToClient, sizeof(game3_HostToClient) );   // check if host acknowledges
+    // } while( game3_HostToClient.client.joined == false );
+    //
+    // // 4. Acknowledge client to tell them they have received
+    // // the message about joining the game and the game can begin.
+    // game3_ClientToHost.acknowledge = true;
+    // SendData( (uint8_t*)&game3_ClientToHost, HOST_IP_ADDR, sizeof(game3_ClientToHost) );
+    //
+    // // initialize all food on client side
+    // for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+    // {
+    //     while ( ReceiveData(&game3_HostToClient, sizeof(game3_HostToClient)) < 0 );
+    //     local_food[i] = game3_HostToClient.new_food;
+    // }
 
     // 4. If you've joined the game, acknowledge you've joined to the host
     //      and show connection through LED.
@@ -932,7 +932,43 @@ void game3_ReadJoystickClient()
  */
 void game3_EndOfGameClient()
 {
+    // display the winner's color on screen
+    if (game3_HostToClient.winner == 1)
+        LCD_Clear(SN_PLAYER1_COLOR);
+    else if (game3_HostToClient.winner == 2)
+        LCD_Clear(SN_PLAYER2_COLOR);
+    else
+        LCD_Clear(LCD_PURPLE);
 
+    // wait for semaphores
+    G8RTOS_WaitSemaphore(&LCDREADY);
+    G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
+    G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
+
+    // software delay to show color for about 1 second
+    for (int j = 0; j < 50; j++)
+    {
+        for (int i = 0; i < 100000; i++);
+    }
+
+    G8RTOS_KillAllOthers();
+
+    // force semaphores to reset here..
+    // shouldn't be required, but fixes semaphore block bug
+    G8RTOS_InitSemaphore(&LCDREADY, 1);
+    G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
+    G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
+
+    buttonUP_pressed = false;
+    buttonDOWN_pressed = false;
+    buttonRIGHT_pressed = false;
+    buttonLEFT_pressed = false;
+
+    game3_HostToClient.winner = 0;
+
+    G8RTOS_AddThread(&menu_MenuClient, 15, 0xFFFFFFFF, "MENU_CLIENT");
+
+    G8RTOS_KillSelf();
 }
 
 /*********************************************** Client Threads *********************************************************************/
@@ -1013,23 +1049,23 @@ void game3_CreateGame()
     RED_OFF;
 
 #ifndef SINGLE
-    // PUT THIS IN A LOOP LATER ***************************************************
-    // HANDSHAKE HERE ----------------------------------------------
-    // 3. Try to receive packet from the client until return SUCCESS
-    while( ReceiveData((_u8*)&game3_HostToClient.client, sizeof(game3_HostToClient.client)) < 0 );
-
-    // 4. Acknowledge client to tell them they joined the game.
-    game3_HostToClient.client.joined = true;
-    game3_HostToClient.client.playerNumber = numPlayers;
-    SendData( (_u8*)&game3_HostToClient, game3_HostToClient.client.IP_address, sizeof(game3_HostToClient) );
-
-    // Wait for client to sync with host by acknowledging that
-    // it received the host message.
-    do
-    {
-        ReceiveData((uint8_t*)&game3_HostToClient.client, sizeof(game3_HostToClient.client));
-    } while ( game3_HostToClient.client.acknowledge == false );
-    // HANDSHAKE HERE -----------------------------------------------
+    // // PUT THIS IN A LOOP LATER ***************************************************
+    // // HANDSHAKE HERE ----------------------------------------------
+    // // 3. Try to receive packet from the client until return SUCCESS
+    // while( ReceiveData((_u8*)&game3_HostToClient.client, sizeof(game3_HostToClient.client)) < 0 );
+    //
+    // // 4. Acknowledge client to tell them they joined the game.
+    // game3_HostToClient.client.joined = true;
+    // game3_HostToClient.client.playerNumber = numPlayers;
+    // SendData( (_u8*)&game3_HostToClient, game3_HostToClient.client.IP_address, sizeof(game3_HostToClient) );
+    //
+    // // Wait for client to sync with host by acknowledging that
+    // // it received the host message.
+    // do
+    // {
+    //     ReceiveData((uint8_t*)&game3_HostToClient.client, sizeof(game3_HostToClient.client));
+    // } while ( game3_HostToClient.client.acknowledge == false );
+    // // HANDSHAKE HERE -----------------------------------------------
 #endif
 
     // Initialize the food centers ----------------------------
@@ -1195,32 +1231,47 @@ void game3_UpdateGamestateHost()
                 game3_HostToClient.players[1].center.y = SN_MAP_MIN_Y; // SN_SNAKE_SIZE / 2;
             }
 
-            // Check if any players collided with food on the map
-            for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
-            {
-                game3_Food_t * tempFood = &local_food[i];
-
-                for (int j = 0; j < MAX_NUM_PLAYERS; j++)
-                {
-                    game3_Player_t * tempPlayer = &game3_HostToClient.players[j];
-
-                    // check if the player collided with the food.
-                    // Kill the food and increase size of the player if true.
-                    if ( tempFood->alive == true )
-                    {
-                        if ( tempFood->center.x == tempPlayer->center.x
-                                && tempFood->center.y == tempPlayer->center.y )
-                        {
-                            tempFood->kill = true;
-                            tempFood->alive = false;
-                            tempPlayer->size_up = true;
-                            foodCount--;
-                        }
-                    }
-                }
-            }
-
-            // game3_HostToClient.players[0].size_up = true;
+            // SIZE INCREASE FOR HOST AND CLIENT SIDES
+            // for (int i = 0; i < MAX_NUM_PLAYERS; i++)
+            // {
+            //     game3_Player_t * tempPlayer;
+            //     tempPlayer = &game3_HostToClient.players[i];
+            //
+            //     if ( me->center.x != game3_getHead(i).x || me->center.y != game3_getHead(i).y )
+            //     {
+            //         game3_addSnakeHead(&tempPlayer->center, 0);
+            //
+            //         // add the new center value to the player snake and remove
+            //         // the old tail to be drawn by the draw objects function if
+            //         // the snake is not supposed to size up OR if the max snake
+            //         // length has already been reached.
+            //         if ( !game3_HostToClient.players[i].size_up || game3_limitReached(i) )
+            //         {
+            //             G8RTOS_WaitSemaphore(&LCDREADY);
+            //             point_t eraseCenter;
+            //
+            //             point_t erasePoint = game3_rmSnakeTail(i);
+            //             mapObjectToPrev(1, &erasePoint, &eraseCenter);
+            //
+            //             // Erase the previous tail here if the tail is deleted..
+            //             if (withinPlayerRange(&eraseCenter))
+            //             {
+            //                 LCD_DrawRectangle( eraseCenter.x - SN_SNAKE_SIZE / 2,
+            //                                    eraseCenter.x + SN_SNAKE_SIZE / 2,
+            //                                    eraseCenter.y - SN_SNAKE_SIZE / 2,
+            //                                    eraseCenter.y + SN_SNAKE_SIZE / 2,
+            //                                    SN_BG_COLOR);
+            //             }
+            //
+            //             G8RTOS_SignalSemaphore(&LCDREADY);
+            //         }
+            //         else
+            //         {
+            //             // make sure the player only increases in size once per food
+            //             game3_HostToClient.players[i].size_up = false;
+            //         }
+            //     }
+            // }
             if ( me->center.x != game3_getHead(0).x || me->center.y != game3_getHead(0).y )
             {
                 game3_addSnakeHead(&me->center, 0);
@@ -1256,12 +1307,60 @@ void game3_UpdateGamestateHost()
                 }
             }
 
+            // COLLISION DETECTION ========================================================
+            // Check if any players collided with food on the map
+            for (int i = 0; i < SN_MAX_FOOD_ON_MAP; i++)
+            {
+                game3_Food_t * tempFood = &local_food[i];
+
+                for (int j = 0; j < MAX_NUM_PLAYERS; j++)
+                {
+                    game3_Player_t * tempPlayer = &game3_HostToClient.players[j];
+
+                    // check if the player collided with the food.
+                    // Kill the food and increase size of the player if true.
+                    if ( tempFood->alive == true )
+                    {
+                        if ( tempFood->center.x == tempPlayer->center.x
+                                && tempFood->center.y == tempPlayer->center.y )
+                        {
+                            tempFood->kill = true;
+                            tempFood->alive = false;
+                            tempPlayer->size_up = true;
+                            foodCount--;
+                        }
+                    }
+                }
+            }
+
+            // Check if the host collided with the client player
+            // RESULT: Player 2 wins
+            game3_Player_t * enemy = &game3_HostToClient.players[1];
+            for (int i = 0; i < game3_snakeLength(1); i++)
+            {
+                point_t temp = game3_snakeAt(i, 1);
+                if ( me->center.x == temp.x )
+                {
+                    if ( me->center.y == temp.y )
+                        game3_HostToClient.winner = 2;
+                }
+            }
+
+            // Check if the client collided with the host player
+            for (int i = 0; i < game3_snakeLength(0); i++)
+            {
+                point_t temp = game3_snakeAt(i, 0);
+                if ( enemy->center.x == temp.x )
+                {
+                    if ( enemy->center.y == temp.y )
+                        game3_HostToClient.winner = 1;
+                }
+            }
+
             updateJoystickCount = 0;
         }
 
         G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
-
-        // CLIENT ADJUSTMENTS --------------------------------
 
         sleep(15);
     }
@@ -1337,10 +1436,43 @@ void game3_ReadJoystickHost()
  */
 void game3_EndOfGameHost()
 {
-    while(1)
+    // display the winner's color on screen
+    if (game3_HostToClient.winner == 1)
+        LCD_Clear(SN_PLAYER1_COLOR);
+    else if (game3_HostToClient.winner == 2)
+        LCD_Clear(SN_PLAYER2_COLOR);
+    else
+        LCD_Clear(LCD_PURPLE);
+
+    // wait for semaphores
+    G8RTOS_WaitSemaphore(&LCDREADY);
+    G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
+    G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
+
+    // software delay to show color for about 1 second
+    for (int j = 0; j < 50; j++)
     {
-        sleep(5);
+        for (int i = 0; i < 100000; i++);
     }
+
+    G8RTOS_KillAllOthers();
+
+    // force semaphores to reset here..
+    // shouldn't be required, but fixes semaphore block bug
+    G8RTOS_InitSemaphore(&LCDREADY, 1);
+    G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
+    G8RTOS_InitSemaphore(&CENTER_SEMAPHORE, 1);
+
+    buttonUP_pressed = false;
+    buttonDOWN_pressed = false;
+    buttonRIGHT_pressed = false;
+    buttonLEFT_pressed = false;
+
+    game3_HostToClient.winner = 0;
+
+    G8RTOS_AddThread(&menu_MenuHost, 15, 0xFFFFFFFF, "MENU_HOST");
+
+    G8RTOS_KillSelf();
 }
 
 /*********************************************** Host Threads *********************************************************************/
@@ -1491,11 +1623,11 @@ void game3_DrawObjects()
 
                     // fix the bug where the client tries to erase the
                     // head at the wrong location
-                    if ( GetPlayerRole() == Client )
-                    {
-                        x_off = 0;
-                        y_off = 0;
-                    }
+                    // if ( GetPlayerRole() == Client )
+                    // {
+                    //     x_off = 0;
+                    //     y_off = 0;
+                    // }
 
                     point_t tempCenter;
                     tempCenter.x = mappedCenter.x + x_off * SN_SNAKE_SIZE;
@@ -1509,7 +1641,7 @@ void game3_DrawObjects()
                                           tempCenter.x + SN_SNAKE_SIZE / 2,
                                           tempCenter.y - SN_SNAKE_SIZE / 2,
                                           tempCenter.y + SN_SNAKE_SIZE / 2,
-                                          delete);
+                                          LCD_PINK); //delete);
                         G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
@@ -1524,10 +1656,6 @@ void game3_DrawObjects()
                     snakeBodyCenter = game3_snakeAt(j, i);
                     mapObjectToMe(&snakeBodyCenter, &mappedBodyCenter);
 
-                    mapObjectToPrev(0, &snakeBodyCenter, &prevMappedBodyCenter);
-                    bool not_erase = false;
-                    not_erase = game3_iterateCurrentSnakeCenters( &prevMappedBodyCenter, i );  // erasing
-
                     // store mapped center to the snake buffer for this player
                     game3_storeToSnakeCenterBuffer(&mappedBodyCenter, j, i);
 
@@ -1536,25 +1664,24 @@ void game3_DrawObjects()
                     if ( j == 0 )
                         continue;
 
-                    // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
-                    // ************************************************
-                    bool not_draw = false;
-
-                    // iterate through all previous snake centers and determine
-                    // if the snake was located here in a previous iteration.
-                    not_draw = game3_iteratePrevSnakeCenters( &mappedBodyCenter, i );       // drawing
-
-                    // ************************************************
-                    // ALGORITHM TO REDRAW REQUIRED BLOCKS GOES HERE!!!
-
-                    if ( withinPlayerRange(&mappedBodyCenter) && (!not_draw || !not_erase) )
+                    if ( withinPlayerRange(&mappedBodyCenter) ) //&& (!not_draw || !not_erase) )
                     {
+                        point_t Start = mappedBodyCenter;
+                        Start.x -= SN_SNAKE_SIZE / 2;
+                        Start.y -= SN_SNAKE_SIZE / 2;
+
+                        point_t End = mappedBodyCenter;
+                        End.x += SN_SNAKE_SIZE / 2;
+                        End.y += SN_SNAKE_SIZE / 2;
+                        common_checkLCDBoundaries(&Start);
+                        common_checkLCDBoundaries(&End);
+
                         G8RTOS_WaitSemaphore(&LCDREADY);
-                        LCD_DrawRectangle(mappedBodyCenter.x - SN_SNAKE_SIZE / 2,
-                                      mappedBodyCenter.x + SN_SNAKE_SIZE / 2,
-                                      mappedBodyCenter.y - SN_SNAKE_SIZE / 2,
-                                      mappedBodyCenter.y + SN_SNAKE_SIZE / 2,
-                                      color);
+                        LCD_DrawRectangle(Start.x,
+                                          End.x,
+                                          Start.y,
+                                          End.y,
+                                          color);
                         G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
@@ -1590,11 +1717,21 @@ void game3_DrawObjects()
                         int16_t delete_color = SN_BG_COLOR;
                         game3_checkDeleteColor(&snakeBodyCenter, &player->dir, &delete_color);
 
+                        point_t Start = prevMappedBodyCenter;
+                        Start.x -= SN_SNAKE_SIZE / 2;
+                        Start.y -= SN_SNAKE_SIZE / 2;
+
+                        point_t End = prevMappedBodyCenter;
+                        End.x += SN_SNAKE_SIZE / 2;
+                        End.y += SN_SNAKE_SIZE / 2;
+                        common_checkLCDBoundaries(&Start);
+                        common_checkLCDBoundaries(&End);
+
                         G8RTOS_WaitSemaphore(&LCDREADY);
-                        LCD_DrawRectangle(prevMappedBodyCenter.x - SN_SNAKE_SIZE / 2,
-                                          prevMappedBodyCenter.x + SN_SNAKE_SIZE / 2,
-                                          prevMappedBodyCenter.y - SN_SNAKE_SIZE / 2,
-                                          prevMappedBodyCenter.y + SN_SNAKE_SIZE / 2,
+                        LCD_DrawRectangle(Start.x,
+                                          End.x,
+                                          Start.y,
+                                          End.y,
                                           delete_color);
                         G8RTOS_SignalSemaphore(&LCDREADY);
                     }
@@ -1640,15 +1777,24 @@ void game3_DrawObjects()
                 // player's center
                 if (withinPlayerRange(&mappedCenter))
                 {
+                    point_t Start = prevFood[i].center;
+                    Start.x -= SN_SNAKE_SIZE / 2;
+                    Start.y -= SN_SNAKE_SIZE / 2;
+
+                    point_t End = prevFood[i].center;
+                    End.x += SN_SNAKE_SIZE / 2;
+                    End.y += SN_SNAKE_SIZE / 2;
+                    common_checkLCDBoundaries(&Start);
+                    common_checkLCDBoundaries(&End);
 
                     // erase the old position if this is not an initialization
                     if ( withinPlayerRange(&prevFood[i].center) )
                     {
                         G8RTOS_WaitSemaphore(&LCDREADY);
-                        LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2,
-                                          prevFood[i].center.x + SN_FOOD_SIZE / 2,
-                                          prevFood[i].center.y - SN_FOOD_SIZE / 2,
-                                          prevFood[i].center.y + SN_FOOD_SIZE / 2,
+                        LCD_DrawRectangle(Start.x,
+                                          End.x,
+                                          Start.y,
+                                          End.y,
                                           SN_BG_COLOR);
                         G8RTOS_SignalSemaphore(&LCDREADY);
                     }
@@ -1668,11 +1814,21 @@ void game3_DrawObjects()
                 // make sure to erase that square.
                 else if ( withinPlayerRange(&prevFood[i].center) )
                 {
+                    point_t Start = prevFood[i].center;
+                    Start.x -= SN_SNAKE_SIZE / 2;
+                    Start.y -= SN_SNAKE_SIZE / 2;
+
+                    point_t End = prevFood[i].center;
+                    End.x += SN_SNAKE_SIZE / 2;
+                    End.y += SN_SNAKE_SIZE / 2;
+                    common_checkLCDBoundaries(&Start);
+                    common_checkLCDBoundaries(&End);
+
                     G8RTOS_WaitSemaphore(&LCDREADY);
-                    LCD_DrawRectangle( prevFood[i].center.x - SN_FOOD_SIZE / 2,
-                                       prevFood[i].center.x + SN_FOOD_SIZE / 2,
-                                       prevFood[i].center.y - SN_FOOD_SIZE / 2,
-                                       prevFood[i].center.y + SN_FOOD_SIZE / 2,
+                    LCD_DrawRectangle( Start.x,
+                                       End.x,
+                                       Start.y,
+                                       End.y,
                                        SN_BG_COLOR);
                     G8RTOS_SignalSemaphore(&LCDREADY);
 
@@ -1716,7 +1872,6 @@ void game3_DrawObjects()
          * =                                                    =
          * ======================================================
          */
-
         game3_updateBorders();
 
         G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
