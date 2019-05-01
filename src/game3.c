@@ -1158,39 +1158,41 @@ void game3_UpdateGamestateHost()
                 }
             }
 
-            game3_HostToClient.players[0].size_up = true;
-
-            // add the new center value to the player snake and remove
-            // the old tail to be drawn by the draw objects function if
-            // the snake is not supposed to size up OR if the max snake
-            // length has already been reached.
-            if ( !game3_HostToClient.players[0].size_up || game3_limitReached(0) )
+            // game3_HostToClient.players[0].size_up = true;
+            if ( me->center.x != game3_getHead(0).x || me->center.y != game3_getHead(0).y )
             {
-                G8RTOS_WaitSemaphore(&LCDREADY);
-                point_t eraseCenter;
+                game3_addSnakeHead(&me->center, 0);
 
-                point_t erasePoint = game3_rmSnakeTail(0);
-                mapObjectToPrev(1, &erasePoint, &eraseCenter);
-
-                // Erase the previous tail here if the tail is deleted..
-                if (withinPlayerRange(&eraseCenter))
+                // add the new center value to the player snake and remove
+                // the old tail to be drawn by the draw objects function if
+                // the snake is not supposed to size up OR if the max snake
+                // length has already been reached.
+                if ( !game3_HostToClient.players[0].size_up || game3_limitReached(0) )
                 {
-                    LCD_DrawRectangle( eraseCenter.x - SN_SNAKE_SIZE / 2,
-                                       eraseCenter.x + SN_SNAKE_SIZE / 2,
-                                       eraseCenter.y - SN_SNAKE_SIZE / 2,
-                                       eraseCenter.y + SN_SNAKE_SIZE / 2,
-                                       SN_BG_COLOR);
+                    G8RTOS_WaitSemaphore(&LCDREADY);
+                    point_t eraseCenter;
+
+                    point_t erasePoint = game3_rmSnakeTail(0);
+                    mapObjectToPrev(1, &erasePoint, &eraseCenter);
+
+                    // Erase the previous tail here if the tail is deleted..
+                    if (withinPlayerRange(&eraseCenter))
+                    {
+                        LCD_DrawRectangle( eraseCenter.x - SN_SNAKE_SIZE / 2,
+                                           eraseCenter.x + SN_SNAKE_SIZE / 2,
+                                           eraseCenter.y - SN_SNAKE_SIZE / 2,
+                                           eraseCenter.y + SN_SNAKE_SIZE / 2,
+                                           SN_BG_COLOR);
+                    }
+
+                    G8RTOS_SignalSemaphore(&LCDREADY);
                 }
-
-                G8RTOS_SignalSemaphore(&LCDREADY);
+                else
+                {
+                    // make sure the player only increases in size once per food
+                    game3_HostToClient.players[0].size_up = false;
+                }
             }
-            else
-            {
-                // make sure the player only increases in size once per food
-                game3_HostToClient.players[0].size_up = false;
-            }
-
-            game3_addSnakeHead(&me->center, 0);
 
             updateJoystickCount = 0;
         }
@@ -1420,6 +1422,7 @@ void game3_DrawObjects()
                     point_t tempCenter;
                     tempCenter.x = mappedCenter.x + x_off * SN_SNAKE_SIZE;
                     tempCenter.y = mappedCenter.y + y_off * SN_SNAKE_SIZE;
+                    common_checkLCDBoundaries(&tempCenter);
 
                     if ( withinPlayerRange(&tempCenter) )
                     {
