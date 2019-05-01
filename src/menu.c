@@ -1,4 +1,4 @@
-#define SINGLE
+#define MULTI
 
 /*
  *  menu.c
@@ -144,7 +144,7 @@ void menu_MenuHost ( void )
     // Initialize the game number and previous game number to -1 so they
     // are INVALID game numbers so they will write on the first valid game number,
     // but they are also the same number, so it will not write over a corner.
-
+    LCD_Clear(LCD_BLACK);
     packet_HostToClient.game_number         = -1;
     packet_HostToClient.choice_made         = false;
     packet_HostToClient.prev_game_number    = -1;
@@ -374,6 +374,7 @@ void ExitMenuHost ( void )
 void menu_MenuClient ( void )
 {
     // packet initializations
+    LCD_Clear(LCD_BLACK);
     packet_ClientToHost.IP_address = getLocalIP();
     packet_ClientToHost.acknowledge = false;
     packet_ClientToHost.joined = false;
@@ -477,10 +478,12 @@ void ExitMenuClient ( void )
         game4_addClientThreads();
     }
     */
-    if ( packet_HostToClient.game_number == G_SNAKE )
-        G8RTOS_AddThread(&game3_JoinGame, 16, 0xFFFFFFFF, "JOIN_SNAKE");
 
     packet_HostToClient.choice_made = false;
+    packet_zipped.choice_made = false;
+
+    if ( packet_HostToClient.game_number == G_SNAKE )
+        G8RTOS_AddThread(&game3_JoinGame, 16, 0xFFFFFFFF, "JOIN_SNAKE");
 
     G8RTOS_KillSelf();
 }
