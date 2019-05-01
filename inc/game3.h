@@ -227,6 +227,11 @@ void game3_DrawObjects();
 /*********************************************** Common Functions *********************************************************************/
 
 /*
+ * Returns either Host or Client depending on button press
+ */
+playerType GetPlayerRole();
+
+/*
  * Initializes and prints initial game state
  */
 void game3_InitBoardState();

@@ -4,7 +4,7 @@
  *  menu.c
  *
  *  Created     : 4/20/2019
- *  Last Edit   : 4/29/2019
+ *  Last Edit   : 4/30/2019
  *
  *  UPDATES     :
  *  4/20/2019   : Snake head draws and map movement added
@@ -15,16 +15,11 @@
  *  4/28/2019   : Snake offset at border fixed. Clean erase bug fixed.
  *                initial Snake/Food drawing on both boards works.
  *  4/29/2019   : Finished multiplayer threads (send/receives)
+ *  4/30/2019   : Apples, CPU time save with smart draw functions, new food spawn system,
+ *                size up fixed on host side.
  *
  *  DESCRIPTION : SLITHER.IO
  *
- *  TODO        :
- *  ~ Write the initializers for multiple clients and the handshake
- *  ~ Food should spawn near a random player
- *  ~ Update "me" for client players
- *  ~ Update withinPlayerRange function when ing is implemented
- *  ~ Possibly remove ExitMenu threads if they are never going to be used
- *  ~ Send new local food center data to client every time it is generated in create game
  */
 
 #include "game3.h"
@@ -136,11 +131,13 @@ void game3_InitBoardState()
             // player's center
             if (withinPlayerRange(&mappedCenter))
             {
-                LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-                                  mappedCenter.x + SN_FOOD_SIZE / 2,
-                                  mappedCenter.y - SN_FOOD_SIZE / 2,
-                                  mappedCenter.y + SN_FOOD_SIZE / 2,
-                                  SN_FOOD_COLOR);
+                game3_drawApple( mappedCenter.x, mappedCenter.y );
+
+                // LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
+                //                   mappedCenter.x + SN_FOOD_SIZE / 2,
+                //                   mappedCenter.y - SN_FOOD_SIZE / 2,
+                //                   mappedCenter.y + SN_FOOD_SIZE / 2,
+                //                   SN_FOOD_COLOR);
             }
         }
     }
@@ -193,22 +190,31 @@ void game3_addHostThreads()
 {
 #ifndef SINGLE
     G8RTOS_AddThread(&game3_SendDataToClient, 20, 0xFFFFFFFF, "SEND_TO_CLIENT");
-    G8RTOS_AddThread(&game3_ReceiveDataFromClient, 20, 0xFFFFFFFF, "RECEIVE_FROM_CLIENT");
+    G8RTOS_AddThread(&game3_ReceiveDataFromClient, 22, 0xFFFFFFFF, "RECEIVE_FROM_CLIENT");
 #endif
 
     G8RTOS_AddThread(&game3_UpdateGamestateHost, 20, 0xFFFFFFFF, "GAMESTATE_UPDATE");
     G8RTOS_AddThread(&game3_ReadJoystickHost, 25, 0xFFFFFFFF, "JOYSTICK_HOST");
-    G8RTOS_AddThread(&game3_DrawObjects, 22, 0xFFFFFFFF, "DRAW_OBJECTS");
+    G8RTOS_AddThread(&game3_DrawObjects, 20, 0xFFFFFFFF, "DRAW_OBJECTS");
     G8RTOS_AddThread(&common_IdleThread, 255, 0xFFFFFFFF, "IDLE");
 }
 
 void game3_addClientThreads()
 {
     G8RTOS_AddThread(&game3_SendDataToHost, 20, 0xFFFFFFFF, "SEND_TO_HOST");
-    G8RTOS_AddThread(&game3_ReceiveDataFromHost, 20, 0xFFFFFFFF, "RECEIVE_FROM_HOST");
+    G8RTOS_AddThread(&game3_ReceiveDataFromHost, 22, 0xFFFFFFFF, "RECEIVE_FROM_HOST");
     G8RTOS_AddThread(&game3_ReadJoystickClient, 25, 0xFFFFFFFF, "JOYSTICK_CLIENT");
     G8RTOS_AddThread(&game3_DrawObjects, 22, 0xFFFFFFFF, "DRAW_OBJECTS");
     G8RTOS_AddThread(&common_IdleThread, 255, 0xFFFFFFFF, "IDLE");
+}
+
+/*
+ * Returns either Host or Client depending on button press
+ */
+playerType GetPlayerRole()
+{
+    if ( getLocalIP() == HOST_IP_ADDR ) return Host;
+    else                                return Client;
 }
 
 // This function returns the direction opposite of
@@ -298,7 +304,6 @@ point_t game3_spawnFood()
     int16_t tempX;
     int16_t tempY;
     game3_Food_t * tempFoodPtr;
-    game3_Player_t * tempPlayerPtr;
 
     // search for a center value that is not currently taken
     while ( 1 )
@@ -852,7 +857,9 @@ void game3_ReceiveDataFromHost()
     {
         // Receive packet from the host
         G8RTOS_WaitSemaphore(&CC3100_SEMAPHORE);
+        G8RTOS_WaitSemaphore(&CENTER_SEMAPHORE);
         ReceiveData( (_u8*)&game3_HostToClient, sizeof(game3_HostToClient));
+        G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
         G8RTOS_SignalSemaphore(&CC3100_SEMAPHORE);
 
         // 3. Check if the game is done. Add EndOfGameHost thread if done.
@@ -1430,6 +1437,14 @@ void game3_DrawObjects()
                 {
                     int16_t delete;
 
+                    // fix the bug where the client tries to erase the
+                    // head at the wrong location
+                    if ( GetPlayerRole() == Client )
+                    {
+                        x_off = 0;
+                        y_off = 0;
+                    }
+
                     game3_checkDeleteColor(&player->center, &me->dir, &delete);
 
                     G8RTOS_WaitSemaphore(&LCDREADY);
@@ -1473,6 +1488,14 @@ void game3_DrawObjects()
                 {
                     int16_t delete;
                     game3_checkDeleteColor(&player->center, &me->dir, &delete);
+
+                    // fix the bug where the client tries to erase the
+                    // head at the wrong location
+                    if ( GetPlayerRole() == Client )
+                    {
+                        x_off = 0;
+                        y_off = 0;
+                    }
 
                     point_t tempCenter;
                     tempCenter.x = mappedCenter.x + x_off * SN_SNAKE_SIZE;
@@ -1670,6 +1693,14 @@ void game3_DrawObjects()
                 prevFood[i].center.y = -1;
                 food->kill = false;
 
+                // fix the bug where the client tries to erase the
+                // head at the wrong location
+                if ( GetPlayerRole() == Client )
+                {
+                    x_off = 0;
+                    y_off = 0;
+                }
+
                 LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
                                   mappedCenter.x + SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
                                   mappedCenter.y - SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
@@ -1693,6 +1724,6 @@ void game3_DrawObjects()
         // reassign the local player's center to be used in border updates next cycle
         // my_prev->center = me->center;
 
-        sleep(30);
+        sleep(10);
     }
 }
