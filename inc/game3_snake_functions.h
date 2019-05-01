@@ -10,7 +10,7 @@
 
 #include "common_threads.h"
 
-#define SN_SNAKE_MAX_LENGTH     50
+#define SN_SNAKE_MAX_LENGTH     20
 
 // This represents one block of
 // the snake. Head and tail are of
