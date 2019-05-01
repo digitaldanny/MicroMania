@@ -267,6 +267,8 @@ point_t game3_rmSnakeTail(int8_t player_num)
 
     if ( (*size) > 0 )
     {
+        game3_assignPointers( player_num );
+
         // determine which player's snake
         // array is being pointed to
         if ( player_num == 0 )
