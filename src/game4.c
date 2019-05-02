@@ -245,9 +245,11 @@ void game4_EndOfGameHost(){
     G8RTOS_WaitSemaphore(&LCD_Semaphore);
     G8RTOS_KillAllOthers();
     G8RTOS_InitSemaphore(&LCD_Semaphore, 1);
+    G8RTOS_WaitSemaphore(&LCD_Semaphore);
+    LCD_Clear(LCD_WHITE);
+    G8RTOS_SignalSemaphore(&LCD_Semaphore);
 
-    LCD_Clear(LCD_BLACK);
-    delay(1000000);
+    delay_ms(1000000);
 
     G8RTOS_AddThread(&menu_MenuHost, 10, 0xFFFFFFFF, "MenuHost");
 
