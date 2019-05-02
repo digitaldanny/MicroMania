@@ -481,6 +481,8 @@ void ExitMenuClient ( void )
 
     packet_HostToClient.choice_made = false;
     packet_zipped.choice_made = false;
+    packet_zipped.client.joined = false;
+    packet_zipped.client.acknowledge = false;
 
     if ( packet_HostToClient.game_number == G_SNAKE )
         G8RTOS_AddThread(&game3_JoinGame, 16, 0xFFFFFFFF, "JOIN_SNAKE");
