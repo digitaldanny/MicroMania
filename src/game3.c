@@ -1645,7 +1645,6 @@ void game3_DrawObjects()
                 else if ( !(player->center.x == me->center.x && player->center.y == me->center.y) )
                 {
                     int16_t delete;
-                    game3_checkDeleteColor(&player->center, &me->dir, &delete);
 
                     // fix the bug where the client tries to erase the
                     // head at the wrong location
@@ -1659,6 +1658,7 @@ void game3_DrawObjects()
                     tempCenter.x = mappedCenter.x + x_off * SN_SNAKE_SIZE;
                     tempCenter.y = mappedCenter.y + y_off * SN_SNAKE_SIZE;
                     common_checkLCDBoundaries(&tempCenter);
+                    game3_checkDeleteColor(&player->center, &me->dir, &delete);
 
                     if ( withinPlayerRange(&tempCenter) )
                     {
@@ -1752,8 +1752,6 @@ void game3_DrawObjects()
                     {
 
                         int16_t delete_color = SN_BG_COLOR;
-                        game3_checkDeleteColor(&prevMappedBodyCenter, &player->dir, &delete_color);
-
                         point_t Start = prevMappedBodyCenter;
                         Start.x -= SN_SNAKE_SIZE / 2;
                         Start.y -= SN_SNAKE_SIZE / 2;
@@ -1763,13 +1761,14 @@ void game3_DrawObjects()
                         End.y += SN_SNAKE_SIZE / 2;
                         common_checkLCDBoundaries(&Start);
                         common_checkLCDBoundaries(&End);
+                        game3_checkDeleteColor(&snakeBodyCenter, &me->dir, &delete_color);
 
                         G8RTOS_WaitSemaphore(&LCDREADY);
                         LCD_DrawRectangle(Start.x,
                                           End.x,
                                           Start.y,
                                           End.y,
-                                          delete_color);
+                                          delete_color); // LCD_PINK); // delete_color);
                         G8RTOS_SignalSemaphore(&LCDREADY);
                     }
                 }
@@ -1895,6 +1894,8 @@ void game3_DrawObjects()
 
                     food->alive = true;
                     food->center = game3_HostToClient.new_food.center;
+
+                    mapObjectToMe(&food->center, &mappedCenter);
                 }
 
                 if (withinPlayerRange(&food->center) )
