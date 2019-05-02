@@ -37,11 +37,11 @@ game3_ClientToHost_t game3_ClientToHost;
 uint8_t game3_numPlayers;
 
 // OTHER VARIABLES
-uint8_t updateJoystickCount = 0;
-int16_t offsetX = 0;
-int16_t offsetY = -1;   // init to be moving upward
-int16_t offsetXClient = 0;
-int16_t offsetYClient = -1;
+uint8_t updateJoystickCount;
+int16_t offsetX;
+int16_t offsetY;   // init to be moving upward
+int16_t offsetXClient;
+int16_t offsetYClient;
 
 prev_player_t prevPlayers[MAX_NUM_PLAYERS];
 prev_Food_t prevFood[SN_MAX_FOOD_ON_MAP];
@@ -80,8 +80,8 @@ point_t startPointTop;             point_t endPointTop;
 point_t startPointBottom;             point_t endPointBottom;
 
 // other globals --------------
-int16_t avgX = 0;
-int16_t avgY = 0;
+int16_t avgX;
+int16_t avgY;
 
 /*********************************************** Common Functions *********************************************************************/
 
@@ -1034,8 +1034,16 @@ void game3_JoinGame()
     startPointBottom.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
     endPointBottom.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
+    // INITIALIZE GLOBALS
     do_delete = false;
     do_draw = false;
+    avgX = 0;
+    avgY = 0;
+    updateJoystickCount = 0;
+    offsetX = 0;
+    offsetY = -1;   // init to be moving upward
+    offsetXClient = 0;
+    offsetYClient = -1;
 
     // initialize the snake linked lists locally
     for (int i = 0; i < MAX_NUM_PLAYERS; i++)
@@ -1254,9 +1262,8 @@ void game3_CreateGame()
     G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
     G8RTOS_InitSemaphore(&LCDREADY, 1);
 
+    // hardware initializations
     common_buttons_init();
-    updateJoystickCount = 0;
-    update_lists = false;
 
     // INITIALIZE BORDERS TO BE DRAWN IN THE INIT FUNCTION
     // left border init ----------------------------------------
@@ -1275,8 +1282,18 @@ void game3_CreateGame()
     startPointBottom.x = SN_MAP_MIN_X - SN_SNAKE_SIZE / 2;    startPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
     endPointBottom.x = SN_MAP_MAX_X + SN_SNAKE_SIZE / 2;      endPointBottom.y = SN_MAP_MAX_Y + SN_SNAKE_SIZE / 2;
 
+    // INITIALIZE GLOBALS
+    updateJoystickCount = 0;
+    update_lists = false;
+    updateJoystickCount = 0;
+    offsetX = 0;
+    offsetY = -1;   // init to be moving upward
+    offsetXClient = 0;
+    offsetYClient = -1;
     do_delete = false;
     do_draw = false;
+    avgX = 0;
+    avgY = 0;
 
     // packet initializations
     // Initialize the game number and previous game number to -1 so they
@@ -1891,12 +1908,6 @@ void game3_DrawObjects()
 
                 if (withinPlayerRange(&prevFood[i].center) )
                 {
-                    // LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
-                    //                   mappedCenter.x + SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
-                    //                   mappedCenter.y - SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
-                    //                   mappedCenter.y + SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
-                    //                   SN_BG_COLOR);
-
                     LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2 ,
                                       prevFood[i].center.x + SN_FOOD_SIZE / 2 ,
                                       prevFood[i].center.y - SN_FOOD_SIZE / 2 ,
@@ -1928,9 +1939,6 @@ void game3_DrawObjects()
         game3_updateBorders();
 
         // G8RTOS_SignalSemaphore(&CENTER_SEMAPHORE);
-
-        // reassign the local player's center to be used in border updates next cycle
-        // my_prev->center = me->center;
 
         __enable_interrupts();
 
