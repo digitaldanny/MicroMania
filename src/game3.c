@@ -1752,7 +1752,7 @@ void game3_DrawObjects()
                     {
 
                         int16_t delete_color = SN_BG_COLOR;
-                        game3_checkDeleteColor(&snakeBodyCenter, &player->dir, &delete_color);
+                        game3_checkDeleteColor(&prevMappedBodyCenter, &player->dir, &delete_color);
 
                         point_t Start = prevMappedBodyCenter;
                         Start.x -= SN_SNAKE_SIZE / 2;
