@@ -1925,6 +1925,6 @@ void game3_DrawObjects()
 
         __enable_interrupts();
 
-        sleep(30);
+        sleep(40);
     }
 }
