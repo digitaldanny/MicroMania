@@ -94,6 +94,7 @@ void game3_InitBoardState()
     game3_Food_t * food;
     point_t mappedCenter;
     uint16_t color;
+    foodCount = 0;
 
     LCD_Clear(SN_BG_COLOR);
 
@@ -140,12 +141,7 @@ void game3_InitBoardState()
             if (withinPlayerRange(&mappedCenter))
             {
                 game3_drawApple( mappedCenter.x, mappedCenter.y );
-
-                // LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2,
-                //                   mappedCenter.x + SN_FOOD_SIZE / 2,
-                //                   mappedCenter.y - SN_FOOD_SIZE / 2,
-                //                   mappedCenter.y + SN_FOOD_SIZE / 2,
-                //                   SN_FOOD_COLOR);
+                foodCount++;
             }
         }
     }
