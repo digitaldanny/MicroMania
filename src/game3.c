@@ -1881,6 +1881,29 @@ void game3_DrawObjects()
                 // mapObjectToMe(&prevFood[i].center, &mappedCenter);
                 mapObjectToMe(&food->center, &mappedCenter);
 
+                // fix the bug where the client tries to erase the
+                // head at the wrong location
+                if ( GetPlayerRole() == Client )
+                {
+                    x_off = 0;
+                    y_off = 0;
+                }
+
+                if (withinPlayerRange(&prevFood[i].center) )
+                {
+                    // LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
+                    //                   mappedCenter.x + SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
+                    //                   mappedCenter.y - SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
+                    //                   mappedCenter.y + SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
+                    //                   SN_BG_COLOR);
+
+                    LCD_DrawRectangle(prevFood[i].center.x - SN_FOOD_SIZE / 2 ,
+                                      prevFood[i].center.x + SN_FOOD_SIZE / 2 ,
+                                      prevFood[i].center.y - SN_FOOD_SIZE / 2 ,
+                                      prevFood[i].center.y + SN_FOOD_SIZE / 2 ,
+                                      SN_BG_COLOR);
+                }
+
                 prevFood[i].center.x = -1;
                 prevFood[i].center.y = -1;
                 food->kill = false;
@@ -1889,22 +1912,8 @@ void game3_DrawObjects()
                 // head at the wrong location
                 if ( GetPlayerRole() == Client )
                 {
-                    x_off = 0;
-                    y_off = 0;
-
                     food->alive = true;
                     food->center = game3_HostToClient.new_food.center;
-
-                    mapObjectToMe(&food->center, &mappedCenter);
-                }
-
-                if (withinPlayerRange(&food->center) )
-                {
-                    LCD_DrawRectangle(mappedCenter.x - SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
-                                      mappedCenter.x + SN_FOOD_SIZE / 2 + x_off * SN_SNAKE_SIZE,
-                                      mappedCenter.y - SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
-                                      mappedCenter.y + SN_FOOD_SIZE / 2 + y_off * SN_SNAKE_SIZE,
-                                      SN_BG_COLOR);
                 }
             }
         }
