@@ -1721,8 +1721,8 @@ void game3_DrawObjects()
                 {
                     snakeBodyCenter = game3_snakeAt(j, i);
 
-                    // if ( j == 0 && GetPlayerRole() == Client )
-                    //     continue;
+                    if ( j == 0 && GetPlayerRole() == Client )
+                        continue;
 
                     if ( i == 1 && GetPlayerRole() == Host )
                     {
