@@ -143,6 +143,7 @@ typedef struct
 void game3_addHostThreads();    // called by the menu to initialize this game
 void game3_addClientThreads();  // called by the menu to initialize this game
 
+void game3_updateLinkedLists();
 dir_t game3_oppositeDir ( dir_t dir );
 void game3_checkDeleteColor( point_t * center, dir_t * dir, int16_t * color );
 void game3_forceBorderTurn( point_t * center, int16_t * x_off, int16_t * y_off, dir_t * dir );
