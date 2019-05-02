@@ -130,7 +130,7 @@ void game1_EndOfGameClient(){
     G8RTOS_InitSemaphore(&LCD_Semaphore, 1);
 
     LCD_Clear(LCD_BLACK);
-    delay(1000000);
+    delay_ms(1000000);
 
     G8RTOS_AddThread(&menu_MenuClient, 10, 0xFFFFFFFF, "MenuClient");
 
@@ -294,7 +294,7 @@ void game1_EndOfGameHost(){
     G8RTOS_InitSemaphore(&LCD_Semaphore, 1);
 
     LCD_Clear(LCD_BLACK);
-    delay(1000000);
+    delay_ms(1000000);
 
     G8RTOS_AddThread(&menu_MenuHost, 10, 0xFFFFFFFF, "MenuHost");
 

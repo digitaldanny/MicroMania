@@ -358,10 +358,10 @@ void ExitMenuHost ( void )
     else if ( packet_HostToClient.game_number == G_SUMO )
         G8RTOS_AddThread(&game4_CreateGame, 16, 0xFFFFFFFF, "CREATE_SUMO");
      */
-    if ( packet_HostToClient.game_number == G_SNAKE )
-        G8RTOS_AddThread(&game4_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
-    else
-        LCD_Clear(LCD_PURPLE);
+    //if ( packet_HostToClient.game_number == G_SNAKE )
+        G8RTOS_AddThread(&game1_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
+    //else
+     //   LCD_Clear(LCD_PURPLE);
 
     // reset so a choice can be made again later
     packet_HostToClient.choice_made = false;
@@ -483,7 +483,12 @@ void ExitMenuClient ( void )
     packet_zipped.choice_made = false;
     packet_zipped.client.joined = false;
     packet_zipped.client.acknowledge = false;
-
+    //if ( packet_HostToClient.game_number == G_SNAKE )
+    //{
+        //G8RTOS_KillAllOthers();
+        G8RTOS_AddThread( &game1_JoinGame, 15, 0xFFFFFFFF, "MENU_CLIENT" ); // lowest priority
+    //}
+/*
     if ( packet_HostToClient.game_number == G_SNAKE )
     {
         G8RTOS_KillAllOthers();
@@ -492,6 +497,6 @@ void ExitMenuClient ( void )
     else{
         LCD_Clear(LCD_PURPLE);
     }
-
+*/
     G8RTOS_KillSelf();
 }
