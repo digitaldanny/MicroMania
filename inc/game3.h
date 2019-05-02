@@ -27,11 +27,6 @@ extern semaphore_t CENTER_SEMAPHORE;
 #define SN_FOOD_SIZE            10
 #define SN_FOOD_SPAWN_RANGE     30
 
-#define SN_DIR_RIGHT        0
-#define SN_DIR_LEFT         1
-#define SN_DIR_UP           2
-#define SN_DIR_DOWN         3
-
 #define SN_PLAYER1_COLOR    LCD_GREEN
 #define SN_PLAYER2_COLOR    LCD_BLUE
 #define SN_PLAYER3_COLOR    LCD_RED
@@ -45,18 +40,12 @@ extern semaphore_t CENTER_SEMAPHORE;
 #define SN_SNAKE_FRAME_6    26
 #define SN_SNAKE_FRAME_7    27
 
-#define SN_FIFO_PL0         0
-#define SN_FIFO_PL1         1
-#define SN_FIFO_PL2         2
-
 #define SN_SNAKE_SIZE       SN_FOOD_SIZE
 
 #define SN_MAP_MAX_X        1 * (MAX_SCREEN_X) + SN_SNAKE_SIZE / 2
 #define SN_MAP_MIN_X        0 + SN_SNAKE_SIZE / 2
-#define SN_MAP_CENTER_X     SN_MAP_MAX_X / 2
 #define SN_MAP_MAX_Y        1 * (MAX_SCREEN_Y) + SN_SNAKE_SIZE / 2
 #define SN_MAP_MIN_Y        0 + SN_SNAKE_SIZE / 2
-#define SN_MAP_CENTER_Y     SN_MAP_MAX_Y / 2
 
 #define SN_BG_COLOR         LCD_WHITE
 #define SN_FOOD_COLOR       LCD_PURPLE
@@ -71,6 +60,19 @@ extern semaphore_t CENTER_SEMAPHORE;
 #define GREEN_OFF           P2->OUT &= ~BIT1
 #define BLUE_ON             P2->OUT |= BIT2
 #define BLUE_OFF            P2->OUT &= ~BIT2
+
+// OTHER MACROS ---------------------------
+#define SN_DIR_RIGHT        0
+#define SN_DIR_LEFT         1
+#define SN_DIR_UP           2
+#define SN_DIR_DOWN         3
+
+#define SN_MAP_CENTER_X     SN_MAP_MAX_X / 2
+#define SN_MAP_CENTER_Y     SN_MAP_MAX_Y / 2
+
+#define SN_FIFO_PL0         0
+#define SN_FIFO_PL1         1
+#define SN_FIFO_PL2         2
 
 /*********************************************** Enums ********************************************************************/
 
@@ -123,7 +125,6 @@ typedef struct
     uint8_t playerNumber;   // return data information
     bool joined;            // handshaking data
     bool acknowledge;       // handshaking data
-    point_t kill_food_center;
     dir_t dir;
 } game3_ClientToHost_t;
 
@@ -135,6 +136,7 @@ typedef struct
     game3_ClientToHost_t client;
     game3_Food_t new_food;
     game3_Player_t players[MAX_NUM_PLAYERS];
+    point_t kill_food_center;
     int8_t winner;
 } game3_HostToClient_t;
 
