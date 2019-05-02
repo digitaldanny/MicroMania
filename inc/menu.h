@@ -27,10 +27,11 @@
 
 
 // GAME PROPERTY MACROS -------------------
-#define G_PAC_MAN   0
+#define G_FLAPPY   0
 #define G_DODGEBALL 1
 #define G_SNAKE     2
-#define G_SUMO      3
+#define G_TILES      3
+
 
 /*
  * ======================

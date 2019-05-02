@@ -70,11 +70,12 @@ void menu_initMenu ( void )
     LCD_DrawRectangle(0, MAX_SCREEN_X - 1, MAX_SCREEN_Y - 2, MAX_SCREEN_Y - 1, LCD_WHITE);
 
     // write the game options in each quadrant
-    LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*3, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "PAC-MAN", LCD_WHITE);
+    LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*5, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "FLAPPY BIRD", LCD_WHITE);
     LCD_Text( (QUAD_2_MAX_X + QUAD_2_MIN_X)/2 - 8*4, (QUAD_2_MAX_Y + QUAD_2_MIN_Y)/2 - 16, "DODGEBALL", LCD_WHITE);
     LCD_Text( (QUAD_3_MAX_X + QUAD_3_MIN_X)/2 - 8*3, (QUAD_3_MAX_Y + QUAD_3_MIN_Y)/2, "SLITHER", LCD_WHITE);
-    LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_WHITE);
+    LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "TILES", LCD_WHITE);
 }
+
 
 // redraws the menu with the correct tile hi-lited
 void menu_updateMenu ( void )
@@ -87,8 +88,9 @@ void menu_updateMenu ( void )
         if ( packet_HostToClient.game_number == 0 )
         {
             LCD_DrawRectangle(QUAD_1_MIN_X + 3, QUAD_1_MAX_X - 3, QUAD_1_MIN_Y + 3, QUAD_1_MAX_Y - 3, LCD_WHITE);
-            LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*3, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "PAC-MAN", LCD_BLACK);
+            LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*5, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "FLAPPY BIRD", LCD_BLACK);
         }
+
         else if ( packet_HostToClient.game_number == 1 )
         {
             LCD_DrawRectangle(QUAD_2_MIN_X + 2, QUAD_2_MAX_X - 4, QUAD_2_MIN_Y + 3, QUAD_2_MAX_Y - 3, LCD_WHITE);
@@ -102,15 +104,16 @@ void menu_updateMenu ( void )
         else if ( packet_HostToClient.game_number == 3 )
         {
             LCD_DrawRectangle(QUAD_4_MIN_X + 2, QUAD_4_MAX_X - 4, QUAD_4_MIN_Y + 2, QUAD_4_MAX_Y - 4, LCD_WHITE);
-            LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_BLACK);
+            LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "TILES", LCD_BLACK);
         }
 
         // erase the previous game quadrant
         if ( packet_HostToClient.prev_game_number == 0 )
         {
             LCD_DrawRectangle(QUAD_1_MIN_X + 2, QUAD_1_MAX_X - 2, QUAD_1_MIN_Y + 2, QUAD_1_MAX_Y - 2, LCD_BLACK);
-            LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*3, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "PAC-MAN", LCD_WHITE);
+            LCD_Text( (QUAD_1_MAX_X + QUAD_1_MIN_X)/2 - 8*5, (QUAD_1_MAX_Y + QUAD_1_MIN_Y)/2 - 16, "FLAPPY BIRD", LCD_WHITE);
         }
+
         else if ( packet_HostToClient.prev_game_number == 1 )
         {
             LCD_DrawRectangle(QUAD_2_MIN_X + 1, QUAD_2_MAX_X - 3, QUAD_2_MIN_Y + 2, QUAD_2_MAX_Y - 2, LCD_BLACK);
@@ -124,7 +127,7 @@ void menu_updateMenu ( void )
         else if ( packet_HostToClient.prev_game_number == 3 )
         {
             LCD_DrawRectangle(QUAD_4_MIN_X + 1, QUAD_4_MAX_X - 3, QUAD_4_MIN_Y + 1, QUAD_4_MAX_Y - 3, LCD_BLACK);
-            LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "SUMO", LCD_WHITE);
+            LCD_Text( (QUAD_4_MAX_X + QUAD_4_MIN_X)/2 - 8*2, (QUAD_4_MAX_Y + QUAD_4_MIN_Y)/2, "TILES", LCD_WHITE);
 
         }
 
@@ -348,27 +351,25 @@ void ExitMenuHost ( void )
     buttonRIGHT_pressed = false;
     buttonLEFT_pressed = false;
 
-    /*
     // use the particular game's gameX_addThreadsHost
-    if ( packet_HostToClient.game_number == G_PAC_MAN )
-        G8RTOS_AddThread(&game1_CreateGame, 16, 0xFFFFFFFF, "CREATE_PAC_MAN");
+    if ( packet_HostToClient.game_number == G_FLAPPY )
+        G8RTOS_AddThread(&game1_CreateGame, 16, 0xFFFFFFFF, "CREATE_FLAPPY");
     else if ( packet_HostToClient.game_number == G_DODGEBALL )
-        G8RTOS_AddThread(&game2_CreateGame, 16, 0xFFFFFFFF, "CREATE_DODGE");
+        G8RTOS_AddThread(&Game2_CreateGame, 16, 0xFFFFFFFF, "CREATE_DODGE");
     else if ( packet_HostToClient.game_number == G_SNAKE )
         G8RTOS_AddThread(&game3_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
-    else if ( packet_HostToClient.game_number == G_SUMO )
-        G8RTOS_AddThread(&game4_CreateGame, 16, 0xFFFFFFFF, "CREATE_SUMO");
-     */
-    if ( packet_HostToClient.game_number == G_SNAKE )
-        G8RTOS_AddThread(&game3_CreateGame, 16, 0xFFFFFFFF, "CREATE_SNAKE");
+    else if ( packet_HostToClient.game_number == G_TILES )
+        G8RTOS_AddThread(&game4_CreateGame, 16, 0xFFFFFFFF, "CREATE_TILE");
     else
         LCD_Clear(LCD_PURPLE);
+
 
     // reset so a choice can be made again later
     packet_HostToClient.choice_made = false;
 
     G8RTOS_KillSelf();
 }
+
 
 /*********************************************** Client Threads *********************************************************************/
 void menu_MenuClient ( void )
@@ -411,7 +412,6 @@ void menu_MenuClient ( void )
 #ifdef SINGLE
     while(1)
     {
-
         sleep(10);
     }
 #endif
@@ -459,33 +459,30 @@ void ExitMenuClient ( void )
     G8RTOS_InitSemaphore(&LCDREADY, 1);
     G8RTOS_InitSemaphore(&CC3100_SEMAPHORE, 1);
 
-    /*
-    // use the particular game's gameX_addThreadsHost
-    if ( packet_HostToClient.game_number == 0 )
-    {
-        game1_addClientThreads();
-    }
-    else if ( packet_HostToClient.game_number == 1 )
-    {
-        game2_addClientThreads();
-    }
-    else if ( packet_HostToClient.game_number == 2 )
-    {
-        game3_addClientThreads();
-    }
-    else if ( packet_HostToClient.game_number == 3 )
-    {
-        game4_addClientThreads();
-    }
-    */
-
     packet_HostToClient.choice_made = false;
     packet_zipped.choice_made = false;
     packet_zipped.client.joined = false;
     packet_zipped.client.acknowledge = false;
 
-    if ( packet_HostToClient.game_number == G_SNAKE )
-        G8RTOS_AddThread(&game3_JoinGame, 16, 0xFFFFFFFF, "JOIN_SNAKE");
+    if ( packet_HostToClient.game_number == G_FLAPPY )
+    {
+        G8RTOS_AddThread(&game1_JoinGame, 16, 0xFFFFFFFF, "JOIN_FLAPPY");
+    }
 
+    else if ( packet_HostToClient.game_number == G_DODGEBALL )
+    {
+        G8RTOS_AddThread(&Game2_JoinGame, 16, 0xFFFFFFFF, "JOIN_DODGEBALL");
+    }
+
+    else if ( packet_HostToClient.game_number == G_SNAKE )
+    {
+        G8RTOS_AddThread(&game3_JoinGame, 16, 0xFFFFFFFF, "JOIN_SNAKE");
+    }
+
+    else if ( packet_HostToClient.game_number == G_TILES )
+    {
+        G8RTOS_KillAllOthers();
+        G8RTOS_AddThread( &menu_MenuClient, 15, 0xFFFFFFFF, "MENU_CLIENT" ); // lowest priority
+    }
     G8RTOS_KillSelf();
 }

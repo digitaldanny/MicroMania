@@ -24,6 +24,7 @@ bool buttonUP_pressed;
 bool buttonRIGHT_pressed;
 bool buttonDOWN_pressed;
 bool buttonLEFT_pressed;
+uint8_t afterInit = 0;
 
 playerType myPlayerType;
 
@@ -80,12 +81,10 @@ void common_ButtonPress ( void )
      // determine the next game mode
      if ( (P4->IFG & BIT4))
      {
-         buttonUP_pressed = true;
          myPlayerType = Host;
      }
      else if ( (P4->IFG & BIT5))
      {
-         buttonRIGHT_pressed = true;
          myPlayerType = Client;
      }
 
@@ -93,14 +92,13 @@ void common_ButtonPress ( void )
      // MAIN MENU NAVIGATION MODE --------------------------------------
      if ( (P5->IFG & BIT4 ) )
      {
-         buttonDOWN_pressed = true;
          myPlayerType = Client;
      }
      else if ( (P5->IFG & BIT5) )
      {
-         buttonLEFT_pressed = true;
          myPlayerType = Client;
      }
+
 
      // disable interrupts for the debounce thread
      NVIC_DisableIRQ(PORT5_IRQn);
@@ -113,8 +111,28 @@ void common_ButtonPress ( void )
 // then re-enables interrupts for that port.
 void common_debounceThread ( void )
 {
-    sleep(200); // ms
+    sleep(10); // ms
+        // PORT 4 INTERRUPT ROUTINES ---------------------------------
+        // determine the next game mode
+        if ( (~P4->IN & BIT4))
+        {
+            buttonUP_pressed = true;
+        }
+        else if ( (~(P4->IN) & BIT5))
+        {
+            buttonRIGHT_pressed = true;
+        }
 
+        // PORT 5 INTERRUPT ROUTINE ---------------------------------------
+        // MAIN MENU NAVIGATION MODE --------------------------------------
+        if ( (~(P5->IN) & BIT4 ) )
+        {
+            buttonDOWN_pressed = true;
+        }
+        else if ( (~(P5->IN) & BIT5) )
+        {
+            buttonLEFT_pressed = true;
+        }
     // clear flags
     P4->IFG &= ~(BIT4 | BIT5);
     P5->IFG &= ~(BIT4 | BIT5);
@@ -124,6 +142,7 @@ void common_debounceThread ( void )
 
     G8RTOS_KillSelf();
 }
+
 
 /*********************************************** Background Threads *********************************************************************/
 void common_IdleThread ( void ) { while(1); }
