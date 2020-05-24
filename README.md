@@ -2,6 +2,10 @@
 
 This repository contains files relating to the final project in the course Microprocessor Applications 2. Each team had 3 members and 2 weeks to create a game built on top of the Real-Time Operating System we developed during the first 2 months of the course. Our project consisted of 4 mini-games played on the TI MSP432 launchpad (powered by ARM Cortex-M4) . Of our 4 mini-games, one was single player and three were multiplayer (using TI's CC3100 network processor).
 
+## 0. Note
+
+Repository under construction.
+
 ## 1. RTOS
 
 During the first 5 assignments of the course, each student developed their own RTOS and applications to demo new working features of the operating system. The most important aspects of the RTOS are listed below.
@@ -49,11 +53,11 @@ Video Link:
 Related Files:
 [Core Game](https://github.com/digitaldanny/micro-mania/blob/master/src/game1.c)
 
-### 2.3 Other Games
+### 2.3 Other Games (Designed and Developed by Jacob Crain and Matthew Dolan)
 
-We also implemented two other games called _Tiles_ and _Goomball_. _Tiles_ is a single player memorization-based game where a 4x4 table of tiles with 8 colors are shown to the player at the start of the game.  Each tile has a matching tile with the same color. After 3 seconds, all tiles are flipped over and the player has 3 attempts to guess where all the pairs are. _
+We also implemented two other games called _Tiles_ and _Goomball_. _Tiles_ is a single player memorization-based game where a 4x4 table of tiles with 8 colors are shown to the player at the start of the game.  Each tile has a matching tile with the same color. After 3 seconds, all tiles are flipped over and the player has 3 attempts to guess where all the pairs are.
 
-Goomball_ is a multiplayer Mario-themed game where both players try to avoid getting hit by the goombas. The last person alive wins the match. The main goal of this game was to experiment with using sprites from images on our LCD.
+_Goomball_ is a multiplayer Mario-themed game where both players try to avoid getting hit by the goombas. The last person alive wins the match. The main goal of this game was to experiment with using sprites from images on our LCD.
 
 ## 3. Contributors
 
