@@ -4,18 +4,6 @@ This repository contains files relating to the final project in the course Micro
 
 ## 0. Note
 
-Repository under construction.
-
-## 1. Hardware
-
-| ![Hardware screenshot goes here](image link here) | 
-|:--:| 
-# MICRO-MANIA
-
-This repository contains files relating to the final project in the course Microprocessor Applications 2. Each team had 3 members and 2 weeks to create a game built on top of the Real-Time Operating System we developed during the first 2 months of the course. Our project consisted of 4 mini-games played on the TI MSP432 launchpad (powered by ARM Cortex-M4) . Of our 4 mini-games, one was single player and three were multiplayer (using TI's CC3100 network processor).
-
-## 0. Note
-
 README under construction while making additional software to take in-game screenshots and record a video of the games running. 
 
 ## 1. Hardware
