@@ -2,10 +2,6 @@
 
 This repository contains files relating to the final project in the course Microprocessor Applications 2. Each team had 3 members and 2 weeks to create a game built on top of the Real-Time Operating System we developed during the first 2 months of the course. Our project consisted of 4 mini-games played on the TI MSP432 launchpad (powered by ARM Cortex-M4) . Of our 4 mini-games, one was single player and three were multiplayer (using TI's CC3100 network processor).
 
-## 0. Note
-
-README under construction while making additional software to take in-game screenshots and record a video of the games running. 
-
 ## 1. Hardware
 
 Each of the game console systems contained the hardware summarized below.
@@ -18,9 +14,8 @@ Each of the game console systems contained the hardware summarized below.
 - To enable board-to-board communication via UDP, each launchpad interfaced a TI [CC3100 SimpleLink](https://www.digikey.com/product-detail/en/texas-instruments/CC3100BOOST/296-37769-ND/4862810?utm_adgroup=RF%2FIF%20and%20RFID&utm_source=google&utm_medium=cpc&utm_campaign=Shopping_Texas%20Instruments_0296_Co-op&utm_term=&utm_content=RF%2FIF%20and%20RFID&gclid=CjwKCAjw8df2BRA3EiwAvfZWaJutkkvgnPuYSjb0I8DprFYE4M8eggaCiC-Tff1q4PmoknfxObZhlxoCDgAQAvD_BwE) networking backpack and utilized a TI library that implemented SendPacket and ReceivePacket functions.
 -  Each console's launchpad connected to Professor Jin's custom EEL4930 PCB that contained a touchscreen LCD controllable via SPI, RGB LEDs controllable via PWM, 4 buttons and an analog stick that is readable via interrupt or polling lines.
 
-| ![Hardware screenshot goes here](image link here) | 
-|:--:| 
-| ***Figure 1.1:** Photo of the hardware this repository's software ran on or interfaced with.* |
+![Hardware screenshot goes here](./images/Boards.JPG)
+***Figure 1.1:** Photo of the two boards this repository's code ran on.*
 
 
 ## 2. RTOS
@@ -41,14 +36,7 @@ Related Files:
 
 This game is a limited recreation of the browser game _Slither.IO_, which is reminiscent of the classic arcade game _Snake_. The goal of the game is to kill the other player's snake by tricking him into running into your side while eating randomly spawned food on the map to grow longer. 
 
-| ![Slither screenshot goes here](image link here) | 
-|:--:| 
-| ***Figure 3.1:** Two snapshots of the same game moment showing how each player sees a different portion of the game depending on their location in the map.* |
-
 Although the game was a simple concept, development on an embedded system was challenging because the snake's head was always in the middle of the screen. This meant that most of the LCD screen pixels had to be redrawn constantly, which is a time consuming task for a 48 MHz processor. To alleviate the LCD refreshing problem, we rewired the LCD so that it would work in parallel mode instead of SPI mode. This allowed us to transfer LCD pixel data much more quickly.
-
-Video Link:
-[Slither Gameplay](insert link here)
 
 Related Files:
 [Core Game](https://github.com/digitaldanny/micro-mania/blob/master/src/game3.c)
@@ -58,14 +46,7 @@ Related Files:
 
 This game is a recreation of the hit mobile game _Flappy Bird_ where the player uses a button to control the bird and guide it through randomly spawning pipe obstacles. The goal of the game is to beat your highest score, which is the number of pipes you have cleared successfully. Upon colliding with a pipe, the player dies and restarts the game.
 
-| ![Flappy bird screenshot goes here](image link here) | 
-|:--:| 
-| ***Figure 3.2:** Flappy bird gameplay showing the bird as the player tries to guide it through the pipe obstacles.* |
-
 Although this game is single player, our implementation allows two players to take turns playing the game while the other player watches.
-
-Video Link:
-[Flappy Bird Gameplay](insert link here)
 
 Related Files:
 [Core Game](https://github.com/digitaldanny/micro-mania/blob/master/src/game1.c)
