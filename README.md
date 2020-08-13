@@ -52,8 +52,8 @@ Although none of the games developed in this project were highly complex, this p
 This game is a limited recreation of the browser game _Slither.IO_, which is reminiscent of the classic arcade game _Snake_. The goal of the game is to kill the other player's snake by tricking him into running into your side while eating randomly spawned apples on the map to grow longer. Below are some photos of gameplay.
 
 <p float="left">
-  <img src="./images/Slither1.jpg" width="100" />
-  <img src="./images/Slither.jpg" width="100" /> 
+  <img src="./images/Slither1.jpg" width="300" />
+  <img src="./images/Slither2.jpg" width="300" /> 
 </p>
 
 ***Figure 3.1-3.2:** In-game pictures from player 1's perspective (blue snake). In the left, player 1 is collecting apples in the center of the map so not much of the black borders are shown. On the right, player 1 is very close to the bottom, right edge of the map so a lot of black border is shown.*
