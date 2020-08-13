@@ -203,6 +203,7 @@ void LCD_fillCircle(int poX, int poY, int r,uint16_t color);
 uint16_t LCD_Read (void);
 uint16_t LCD_ReadData(void);
 uint16_t LCD_GetPoint(uint16_t Xpos,uint16_t Ypos);
+void delay_ms(uint16_t ms);
 #endif 
 
 /*********************************************************************************************************
